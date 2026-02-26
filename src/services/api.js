@@ -1,0 +1,25 @@
+import axios from 'axios';
+
+// Create a base instance pointing to your Spring Boot server
+const api = axios.create({
+    baseURL: 'http://localhost:8080/api',
+});
+
+// This intercepts every request BEFORE it leaves React
+api.interceptors.request.use(
+    (config) => {
+        // Look for the token in the browser's local storage
+        const token = localStorage.getItem('token');
+
+        // If it exists, attach it to the header!
+        if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+        }
+        return config;
+    },
+    (error) => {
+        return Promise.reject(error);
+    }
+);
+
+export default api;
