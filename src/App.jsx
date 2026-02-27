@@ -1,7 +1,8 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/Login';
 import Games from './pages/Games';
-import PlayGame from './pages/PlayGame'; // 1. Import the new page
+import PlayGame from './pages/PlayGame';
+import TicTacToe from "./pages/TicTacToe.jsx"; // 1. Import the new page
 
 function App() {
     return (
@@ -10,7 +11,7 @@ function App() {
                 <Route path="/" element={<Navigate to="/login" replace />} />
                 <Route path="/login" element={<Login />} />
                 <Route path="/games" element={<Games />} />
-
+                <Route path="/play/tictactoe" element={<TicTacToe />} />
                 {/* 2. Add the dynamic route. The ":id" means it can be any number */}
                 <Route path="/play/:id" element={<PlayGame />} />
             </Routes>
