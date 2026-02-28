@@ -78,7 +78,7 @@ export default function Games() {
         <div style={containerStyle}>
             {/* NAVBAR */}
             <nav style={styles.navbar}>
-                <h1 style={styles.logo}>🎮 GAMESFLIX</h1>
+                <h1 style={styles.logo}>GAMESFLIX</h1>
                 <div style={styles.navControls}>
 
                     {/* ONLY REGULAR USERS SEE THE CONSOLE TOGGLE */}
@@ -154,15 +154,14 @@ export default function Games() {
                                         className="game-card"
                                         onClick={() => {
                                             if (game.gameType === 'CODED' && game.assetPath) {
-                                                navigate(game.assetPath); // Sends them to /play/tictactoe
+                                                navigate(game.assetPath);
                                             } else {
-                                                navigate(`/play/${game.id}`); // Sends them to the iframe player
+                                                navigate(`/play/${game.id}`);
                                             }
                                         }}
-                                        style={{ padding: 0, position: 'relative' }} /* Added position relative for the absolute button */
                                     >
 
-                                        {/* 🔴 NEW: THE ADMIN DELETE BUTTON */}
+                                        {/* ADMIN DELETE BUTTON */}
                                         {userRole === 'ROLE_ADMIN' && (
                                             <button
                                                 style={styles.deleteButton}
@@ -173,20 +172,20 @@ export default function Games() {
                                             </button>
                                         )}
 
+                                        {/* 1. THE VERTICAL POSTER */}
                                         <img
-                                            src={game.thumbnailUrl || 'https://placehold.co/600x400/222222/FFFFFF/png?text=No+Cover'}
+                                            src={game.thumbnailUrl || 'https://placehold.co/400x600/222222/FFFFFF/png?text=No+Cover'}
                                             alt={game.title}
                                             className="game-poster"
                                             onError={(e) => {
-                                                // If the main image fails to load, swap to this backup immediately!
-                                                e.target.onerror = null; // Prevents an infinite loop if the backup ALSO fails
-                                                e.target.src = 'https://placehold.co/600x400/141414/e50914/png?text=Image+Error';
+                                                e.target.onerror = null;
+                                                e.target.src = 'https://placehold.co/400x600/141414/e50914/png?text=Image+Error';
                                             }}
                                         />
-                                        <div style={{ padding: '20px' }}>
-                                            <h3 style={styles.cardTitle}>{game.title}</h3>
-                                            <p style={styles.cardDesc}>{game.description}</p>
-                                        </div>
+
+                                        {/* 2. JUST THE TITLE (No description or background box) */}
+                                        <h3 style={styles.cardTitle}>{game.title}</h3>
+
                                     </div>
                                 ))}
                             </div>
@@ -204,7 +203,18 @@ export default function Games() {
 const styles = {
     container: { minHeight: '100vh', color: 'white', fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif", transition: 'all 0.5s ease' },
     navbar: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '20px 50px', position: 'sticky', top: 0, zIndex: 100, backgroundColor: 'rgba(20, 20, 20, 0.9)', backdropFilter: 'blur(10px)' },
-    logo: { margin: 0, color: '#e50914', fontSize: '28px', letterSpacing: '2px', textShadow: '2px 2px 4px rgba(0,0,0,0.5)' },
+    logo: {
+        margin: 0,
+        color: '#e50914',
+        fontSize: '42px',
+        fontFamily: '"Arial Black", Impact, sans-serif',
+        fontWeight: '900',
+        letterSpacing: '-2px',           /* Squeezes the letters together */
+        transform: 'scaleY(1.3)',        /* Stretches the letters vertically to make them tall */
+        display: 'inline-block',         /* Required for the scaleY transform to work on text */
+        textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+        cursor: 'pointer'
+    },
     navControls: { display: 'flex', gap: '15px', alignItems: 'center' },
     consoleToggleButton: { padding: '8px 20px', backgroundColor: '#3d4450', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', transition: 'transform 0.2s', boxShadow: '0 4px 6px rgba(0,0,0,0.3)' },
     adminButton: { padding: '8px 16px', backgroundColor: 'rgba(255, 255, 255, 0.1)', color: 'white', border: '1px solid #fff', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
@@ -213,8 +223,11 @@ const styles = {
     heroSub: { fontSize: '1.5rem', margin: 0, textShadow: '2px 2px 4px rgba(0,0,0,0.8)', color: '#e5e5e5' },
     content: { padding: '0 50px 50px 50px', marginTop: '20px' },
     sectionTitle: { fontSize: '1.5rem', marginBottom: '20px', color: '#e5e5e5' },
-    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: '25px' },
-    cardTitle: { marginTop: '0', color: '#fff', fontSize: '1.2rem' },
+    // Make the grid items narrower to match vertical posters
+    grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' },
+
+    // Style the title to look like the floating text in your screenshot
+    cardTitle: { marginTop: '10px', color: '#e5e5e5', fontSize: '1rem', textAlign: 'center', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
     cardDesc: { color: '#aaa', fontSize: '14px', lineHeight: '1.4', marginBottom: '10px' },
     loadingScreen: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#141414', color: '#e50914' },
     error: { color: '#e50914', padding: '10px', backgroundColor: 'rgba(229, 9, 20, 0.1)', borderRadius: '4px', margin: '20px 50px' },
