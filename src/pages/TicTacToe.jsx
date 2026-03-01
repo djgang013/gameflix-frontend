@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import useGameTimer from '../hooks/useGameTimer';
 
 export default function TicTacToe() {
+    useGameTimer("TicTacToe(Java Edition)");
     const navigate = useNavigate();
 
     const [board, setBoard] = useState([

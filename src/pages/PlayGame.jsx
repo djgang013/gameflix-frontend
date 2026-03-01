@@ -1,13 +1,14 @@
 import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
-
+import useGameTimer from '../hooks/useGameTimer';
 export default function PlayGame() {
     // useParams grabs the ID right out of the web address!
     const { id } = useParams();
     const navigate = useNavigate();
 
     const [game, setGame] = useState(null);
+    useGameTimer(game ? game.title : null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 

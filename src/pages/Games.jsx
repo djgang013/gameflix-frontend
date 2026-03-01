@@ -5,6 +5,7 @@ import api from '../services/api';
 import AddGameModal from '../components/AddGameModal';
 
 export default function Games() {
+    const [recentStats, setRecentStats] = useState([]);
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
@@ -31,12 +32,21 @@ export default function Games() {
 
     const fetchGames = async () => {
         try {
-            const response = await api.get('/games');
-            setGames(response.data);
-            console.log(JSON.stringify(response.data[0], null, 2));
+            // Fetch the games AND the user's stats at the same time
+            const [gamesResponse, statsResponse] = await Promise.all([
+                api.get('/games'),
+                api.get('/stats/recent')
+            ]);
+            // --- ADD THESE TWO LINES ---
+            console.log("Games from Java:", gamesResponse.data);
+            console.log("Stats from Java:", statsResponse.data);
+            // ---------------------------
+
+            setGames(gamesResponse.data);
+            setRecentStats(statsResponse.data); // Store the stats!
             setLoading(false);
         } catch (err) {
-            setError('Failed to load games.');
+            setError('Failed to load dashboard data.');
             setLoading(false);
             if (err.response && (err.response.status === 401 || err.response.status === 403)) {
                 handleLogout();
@@ -69,7 +79,13 @@ export default function Games() {
         backgroundColor: isConsoleMode ? '#0a101e' : '#141414',
         backgroundImage: isConsoleMode ? 'radial-gradient(circle at center, #1b2838 0%, #000000 100%)' : 'none'
     };
-
+    const formatTime = (totalSeconds) => {
+        if (totalSeconds < 60) return `${totalSeconds}s`;
+        const minutes = Math.floor(totalSeconds / 60);
+        const hours = Math.floor(minutes / 60);
+        if (hours > 0) return `${hours}h ${minutes % 60}m`;
+        return `${minutes}m`;
+    };
     return (
         <div style={containerStyle}>
             {/* NAVBAR */}
@@ -140,50 +156,87 @@ export default function Games() {
                             </div>
                         </div>
 
-                        {/* CATALOG GRID */}
+                        {/* SINGLE WRAPPER: Fixes the overlap bug! */}
+                        {/* SINGLE WRAPPER: Fixes the overlap bug! */}
                         <div style={styles.catalogSection}>
-                            <h3 style={styles.sectionTitle}>Available to Play</h3>
 
-                            <div style={styles.grid}>
-                                {games.length === 0 ? <p style={styles.noGames}>No games available right now.</p> : null}
-                                {games.map((game) => (
-                                    <div
-                                        key={game.id}
-                                        className="game-card"
-                                        onClick={() => {
-                                            if (game.gameType === 'CODED' && game.assetPath) {
-                                                navigate(game.assetPath);
-                                            } else {
-                                                navigate(`/play/${game.id}`);
-                                            }
-                                        }}
-                                    >
-                                        {/* ADMIN DELETE BUTTON */}
-                                        {userRole === 'ROLE_ADMIN' && (
-                                            <button
-                                                className="delete-btn" /* Added class for hover effects */
-                                                style={styles.deleteButton}
-                                                onClick={(e) => handleDeleteGame(e, game.id)}
-                                                title="Delete Game"
-                                            >
-                                                🗑️
-                                            </button>
-                                        )}
+                            {/* Notice we use gamName here now! */}
+                            {recentStats.filter(s => s.gamName && s.gamName !== 'undefined').length > 0 && (
+                                <div style={{ marginBottom: '40px' }}>
+                                    <h3 style={styles.sectionTitle}>Continue Playing</h3>
+                                    <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
 
-                                        <img
-                                            src={game.thumbnailUrl || 'https://placehold.co/400x600/222222/FFFFFF/png?text=No+Cover'}
-                                            alt={game.title}
-                                            className="game-poster"
-                                            onError={(e) => {
-                                                e.target.onerror = null;
-                                                e.target.src = 'https://placehold.co/400x600/141414/e50914/png?text=Image+Error';
-                                            }}
-                                        />
+                                        {recentStats
+                                            .filter(s => s.gamName && s.gamName !== 'undefined')
+                                            .map(stat => {
+                                                // Use gamName to find the matching game in the catalog
+                                                const matchingGame = games.find(g => g.title === stat.gamName);
+                                                const imageSrc = matchingGame?.thumbnailUrl || 'https://placehold.co/300x150/222/fff?text=' + stat.gamName;
 
-                                        <h3 style={styles.cardTitle}>{game.title}</h3>
+                                                return (
+                                                    <div key={stat.id} style={styles.recentCard} onClick={() => matchingGame && navigate(matchingGame.gameType === 'CODED' ? matchingGame.assetPath : `/play/${matchingGame.id}`)}>
+                                                        <img src={imageSrc} style={styles.recentImage} alt={stat.gamName} />
+                                                        <div style={styles.recentInfo}>
+                                                            {/* Use gamName to display the text! */}
+                                                            <h4 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{stat.gamName}</h4>
+                                                            <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem' }}>
+                                                                ⏱️ Total Time: <span style={{ color: '#4caf50', fontWeight: 'bold' }}>{formatTime(stat.totalPlayTimeSeconds)}</span>
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+
                                     </div>
-                                ))}
+                                </div>
+                            )}
+
+                            {/* CATALOG GRID */}
+                            <div>
+                                <h3 style={styles.sectionTitle}>Available to Play</h3>
+
+                                <div style={styles.grid}>
+                                    {games.length === 0 ? <p style={styles.noGames}>No games available right now.</p> : null}
+                                    {games.map((game) => (
+                                        <div
+                                            key={game.id}
+                                            className="game-card"
+                                            onClick={() => {
+                                                if (game.gameType === 'CODED' && game.assetPath) {
+                                                    navigate(game.assetPath);
+                                                } else {
+                                                    navigate(`/play/${game.id}`);
+                                                }
+                                            }}
+                                        >
+                                            {/* ADMIN DELETE BUTTON */}
+                                            {userRole === 'ROLE_ADMIN' && (
+                                                <button
+                                                    className="delete-btn"
+                                                    style={styles.deleteButton}
+                                                    onClick={(e) => handleDeleteGame(e, game.id)}
+                                                    title="Delete Game"
+                                                >
+                                                    🗑️
+                                                </button>
+                                            )}
+
+                                            <img
+                                                src={game.thumbnailUrl || 'https://placehold.co/400x600/222222/FFFFFF/png?text=No+Cover'}
+                                                alt={game.title}
+                                                className="game-poster"
+                                                onError={(e) => {
+                                                    e.target.onerror = null;
+                                                    e.target.src = 'https://placehold.co/400x600/141414/e50914/png?text=Image+Error';
+                                                }}
+                                            />
+
+                                            <h3 style={styles.cardTitle}>{game.title}</h3>
+                                        </div>
+                                    ))}
+                                </div>
                             </div>
+
                         </div>
                     </>
                 )}
@@ -260,5 +313,8 @@ const styles = {
     // Utility
     loadingScreen: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#141414', color: '#e50914' },
     error: { color: '#e50914', padding: '10px', backgroundColor: 'rgba(229, 9, 20, 0.1)', borderRadius: '4px', margin: '20px 50px' },
-    noGames: { color: '#aaa', gridColumn: '1 / -1', fontSize: '1.2rem' }
+    noGames: { color: '#aaa', gridColumn: '1 / -1', fontSize: '1.2rem' },
+    recentCard: { minWidth: '280px', backgroundColor: '#1c1c1c', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #333', transition: 'transform 0.2s, box-shadow 0.2s' },
+    recentImage: { width: '100%', height: '120px', objectFit: 'cover', borderBottom: '2px solid #e50914' },
+    recentInfo: { padding: '15px' },
 };
