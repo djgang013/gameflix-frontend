@@ -2,9 +2,10 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import useGameTimer from '../hooks/useGameTimer';
-
+import useGamepadExit from '../hooks/useGamepadExit';
 export default function Rps() {
     useGameTimer("RPS: Extreme");
+    useGamepadExit();
     const navigate = useNavigate();
 
     // React state strictly mirrors the Java DTO

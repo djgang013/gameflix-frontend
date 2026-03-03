@@ -2,9 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import useGameTimer from '../hooks/useGameTimer';
-
+import useGamepadExit from '../hooks/useGamepadExit';
 export default function Wordle() {
     useGameTimer("Tech Wordle");
+    useGamepadExit();
     const navigate = useNavigate();
 
     const [gameState, setGameState] = useState({

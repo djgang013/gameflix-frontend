@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import useGameTimer from '../hooks/useGameTimer';
+import useGamepadExit from '../hooks/useGamepadExit';
 export default function PlayGame() {
     // useParams grabs the ID right out of the web address!
     const { id } = useParams();
@@ -9,6 +10,7 @@ export default function PlayGame() {
 
     const [game, setGame] = useState(null);
     useGameTimer(game ? game.title : null);
+    useGamepadExit();
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
 

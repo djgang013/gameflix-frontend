@@ -3,6 +3,7 @@ body { margin: 0; background-color: #141414; }
 /* --- GAMESFLIX CARDS --- */
 /* --- NETFLIX-STYLE POSTER CARDS --- */
 /* --- GAMESFLIX CARDS --- */
+/* --- GAMESFLIX CARDS & HOVER OVERLAYS --- */
 .game-card {
     background-color: transparent;
     cursor: pointer;
@@ -18,18 +19,100 @@ body { margin: 0; background-color: #141414; }
     z-index: 10;
 }
 
-.game-poster {
+/* New Wrapper to contain the overlay */
+.game-poster-wrapper {
+    position: relative;
     width: 100%;
     aspect-ratio: 2 / 3;
-    object-fit: cover;
     border-radius: 6px;
-    background-color: #222;
+    overflow: hidden; /* Keeps the dark overlay perfectly inside the rounded corners */
     box-shadow: 0 4px 8px rgba(0,0,0,0.4);
     transition: box-shadow 0.3s ease;
+    background-color: #222;
+}
+
+.game-poster {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.game-card:hover .game-poster-wrapper {
+    box-shadow: 0 15px 30px rgba(0,0,0,0.8);
 }
 
 .game-card:hover .game-poster {
-    box-shadow: 0 15px 30px rgba(0,0,0,0.8);
+    filter: brightness(0.3) blur(2px); /* Dims and blurs the image on hover */
+    transform: scale(1.05); /* Slight zoom on the image */
+}
+
+/* --- THE STEAM-STYLE OVERLAY --- */
+.game-hover-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    opacity: 0; /* Completely hidden by default */
+    transition: opacity 0.3s ease;
+    box-sizing: border-box;
+}
+
+/* Fade it in when the card is hovered */
+.game-card:hover .game-hover-overlay {
+    opacity: 1;
+}
+
+.hover-desc {
+    color: #e5e5e5;
+    font-size: 0.85rem;
+    line-height: 1.4;
+    margin: 0;
+    /* Truncate text if it's too long */
+    display: -webkit-box;
+    -webkit-line-clamp: 6;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.8);
+}
+
+.hover-tags {
+    margin-top: auto;
+    margin-bottom: 10px;
+}
+
+.hover-badge {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    color: white;
+    font-size: 0.7rem;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.hover-playtime {
+    color: #4caf50;
+    font-size: 0.8rem;
+    font-weight: bold;
+    margin-bottom: 15px;
+}
+
+.hover-play-btn {
+    background-color: #e50914;
+    color: white;
+    text-align: center;
+    padding: 8px 0;
+    border-radius: 4px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    letter-spacing: 1px;
 }
 
 /* Glassmorphism Delete Button Hover */
@@ -101,4 +184,26 @@ body { margin: 0; background-color: #141414; }
 
 .console-card:hover .console-overlay {
     transform: translateY(0); /* Slides the text up when hovered */
+}
+
+/* --- STEAM BILLBOARD STYLES --- */
+.billboard-card {
+    display: flex;
+    width: 100%;
+    height: 100%;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+    cursor: pointer;
+    background-color: #0f1922;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border-radius: 4px; /* Optional: rounds the main banner corners slightly */
+    overflow: hidden;
+}
+
+.billboard-card:hover {
+    transform: scale(1.01);
+    box-shadow: 0 15px 40px rgba(0, 0, 0, 0.8);
+}
+
+.billboard-card:hover .playNowBtn {
+    background-color: #5cbf60 !important; /* Makes the green play button pop on hover */
 }
