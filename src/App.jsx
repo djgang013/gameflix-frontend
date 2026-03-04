@@ -5,7 +5,7 @@ import PlayGame from './pages/PlayGame';
 import TicTacToe from "./pages/TicTacToe.jsx";
 import Rps from './pages/Rps';
 import Wordle from './pages/Wordle';
-
+import Profile from './pages/Profile';
 function App() {
     return (
         <Router>
@@ -18,6 +18,7 @@ function App() {
                 <Route path="/play/wordle" element={<Wordle />} />
                 {/* 2. Add the dynamic route. The ":id" means it can be any number */}
                 <Route path="/play/:id" element={<PlayGame />} />
+                <Route path="/profile" element={<Profile />} />
             </Routes>
         </Router>
     );

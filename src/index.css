@@ -207,3 +207,18 @@ body { margin: 0; background-color: #141414; }
 .billboard-card:hover .playNowBtn {
     background-color: #5cbf60 !important; /* Makes the green play button pop on hover */
 }
+/* --- NETFLIX PREMIUM AVATAR --- */
+.netflix-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 4px; /* Slight rounding on the corners like Netflix */
+    cursor: pointer;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+    transition: transform 0.2s ease, outline 0.2s ease;
+    outline: 2px solid transparent; /* Invisible border by default */
+}
+
+.netflix-avatar:hover {
+    transform: scale(1.05); /* Slight pop */
+    outline: 2px solid white; /* Crisp white border on hover */
+}

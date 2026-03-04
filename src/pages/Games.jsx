@@ -13,11 +13,13 @@ export default function Games() {
     // UI Toggles
     const [isAddModalOpen, setIsAddModalOpen] = useState(false);
     const [userRole, setUserRole] = useState('ROLE_USER');
+    const [username, setUsername] = useState('Player');
     const [isConsoleMode, setIsConsoleMode] = useState(() => localStorage.getItem('gamesflix_mode') === 'true');
 
     // UI Focus States
     const [activeIndex, setActiveIndex] = useState(0); // For Console Mode
     const [featuredIndex, setFeaturedIndex] = useState(0); // For Desktop Billboard
+    const [searchQuery, setSearchQuery] = useState('');
 
     const navigate = useNavigate();
 
@@ -28,6 +30,7 @@ export default function Games() {
             try {
                 const decoded = jwtDecode(token);
                 if (decoded.role) setUserRole(decoded.role);
+                if (decoded.sub) setUsername(decoded.sub);
             } catch (err) {
                 console.error("Could not decode token");
             }
@@ -143,7 +146,10 @@ export default function Games() {
     // The games to show in the Billboard (up to top 5)
     const featuredGames = games.slice(0, 5);
     const currentFeatured = featuredGames[featuredIndex];
-
+    // Filter games based on the search query
+    const filteredGames = games.filter(game =>
+        game.title.toLowerCase().includes(searchQuery.toLowerCase())
+    );
     const containerStyle = {
         ...styles.container,
         backgroundColor: isConsoleMode ? '#0a101e' : '#141414',
@@ -163,14 +169,40 @@ export default function Games() {
             <nav style={styles.navbar}>
                 <h1 style={styles.logo}>GAMESFLIX</h1>
                 <div style={styles.navControls}>
+                    {/* NEW: PREMIUM SEARCH BAR */}
+                    {!isConsoleMode && (
+                        <div style={styles.searchContainer}>
+                            <span style={{ opacity: 0.6 }}>🔍</span>
+                            <input
+                                type="text"
+                                placeholder="Titles, genres..."
+                                value={searchQuery}
+                                onChange={(e) => setSearchQuery(e.target.value)}
+                                style={styles.searchInput}
+                            />
+                        </div>
+                    )}
+
                     {userRole !== 'ROLE_ADMIN' && (
                         <button style={styles.consoleToggleButton} onClick={() => setIsConsoleMode(!isConsoleMode)}>
                             {isConsoleMode ? '🖥️ Desktop Mode' : '🎮 Console Mode'}
                         </button>
                     )}
+
                     {userRole === 'ROLE_ADMIN' && !isConsoleMode && (
                         <button style={styles.addButton} onClick={() => setIsAddModalOpen(true)}>+ Add Game</button>
                     )}
+
+                    {!isConsoleMode && (
+                        <img
+                            src={`https://ui-avatars.com/api/?name=${username}&background=e50914&color=fff&size=40&bold=true`}
+                            alt="Profile"
+                            className="netflix-avatar"
+                            onClick={() => navigate('/profile')}
+                            title="View Profile"
+                        />
+                    )}
+
                     {!isConsoleMode && <button onClick={handleLogout} style={styles.logoutButton}>Sign Out</button>}
                 </div>
             </nav>
@@ -215,7 +247,8 @@ export default function Games() {
                         </div>
 
                         {/* 2. STEAM-STYLE BILLBOARD (Pulled up over the fade!) */}
-                        {featuredGames.length > 0 && (
+                        {/* ONLY SHOW IF NOT SEARCHING */}
+                        {searchQuery === '' && featuredGames.length > 0 && (
                             <div style={styles.billboardSection}>
                                 <h2 style={styles.billboardHeading}>Featured & Recommended</h2>
 
@@ -228,15 +261,11 @@ export default function Games() {
                                             <img src={currentFeatured.thumbnailUrl || 'https://placehold.co/800x400/222/fff'} alt={currentFeatured.title} style={styles.billboardImg} />
                                         </div>
 
+                                        {/* Right Side: Info Panel */}
                                         <div style={styles.billboardRight}>
                                             <h2 style={styles.billboardTitle}>{currentFeatured.title}</h2>
 
-                                            <div style={styles.billboardMiniShots}>
-                                                <div style={{...styles.miniShot, backgroundImage: `url(${currentFeatured.thumbnailUrl || 'https://placehold.co/800x400'})`}} />
-                                                <div style={{...styles.miniShot, backgroundImage: `url(${currentFeatured.thumbnailUrl || 'https://placehold.co/800x400'})`}} />
-                                            </div>
-
-                                            <p style={styles.billboardDesc}>
+                                            <p style={{...styles.billboardDesc, marginTop: '20px'}}>
                                                 {currentFeatured.description || "Jump into this incredible experience. Included with your Gamesflix subscription."}
                                             </p>
 
@@ -265,7 +294,9 @@ export default function Games() {
 
                         {/* 3. REGULAR CATALOG */}
                         <div style={styles.catalogSection}>
-                            {recentStats.filter(s => s.gamName && s.gamName !== 'undefined').length > 0 && (
+
+                            {/* ONLY SHOW CONTINUE PLAYING IF NOT SEARCHING */}
+                            {searchQuery === '' && recentStats.filter(s => s.gamName && s.gamName !== 'undefined').length > 0 && (
                                 <div style={{ marginBottom: '40px' }}>
                                     <h3 style={styles.sectionTitle}>Continue Playing</h3>
                                     <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
@@ -287,10 +318,16 @@ export default function Games() {
                             )}
 
                             <div>
-                                <h3 style={styles.sectionTitle}>All Games</h3>
+                                {/* CHANGE TITLE BASED ON SEARCH */}
+                                <h3 style={styles.sectionTitle}>
+                                    {searchQuery ? `Search Results for "${searchQuery}"` : 'All Games'}
+                                </h3>
+
                                 <div style={styles.grid}>
-                                    {games.length === 0 ? <p style={styles.noGames}>No games available right now.</p> : null}
-                                    {games.map((game) => {
+                                    {/* USE filteredGames INSTEAD OF games */}
+                                    {filteredGames.length === 0 ? <p style={styles.noGames}>No games found.</p> : null}
+
+                                    {filteredGames.map((game) => {
                                         const gameStat = recentStats.find(s => s.gamName === game.title);
                                         return (
                                             <div key={game.id} className="game-card" onClick={() => navigate(game.gameType === 'CODED' ? game.assetPath : `/play/${game.id}`)}>
@@ -387,5 +424,8 @@ const styles = {
 
     loadingScreen: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#141414', color: '#e50914' },
     error: { color: '#e50914', padding: '10px', backgroundColor: 'rgba(229, 9, 20, 0.1)', borderRadius: '4px', margin: '20px 50px', position: 'relative', zIndex: 100 },
-    noGames: { color: '#aaa', gridColumn: '1 / -1', fontSize: '1.2rem' }
+    noGames: { color: '#aaa', gridColumn: '1 / -1', fontSize: '1.2rem' },
+    // --- SEARCH BAR STYLES ---
+    searchContainer: { display: 'flex', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '4px', backdropFilter: 'blur(4px)', transition: 'border-color 0.3s' },
+    searchInput: { backgroundColor: 'transparent', border: 'none', color: 'white', outline: 'none', paddingLeft: '8px', fontSize: '0.95rem', width: '200px' },
 };
