@@ -222,3 +222,68 @@ body { margin: 0; background-color: #141414; }
     transform: scale(1.05); /* Slight pop */
     outline: 2px solid white; /* Crisp white border on hover */
 }
+/* --- PREMIUM NETFLIX SEARCH BAR --- */
+.netflix-search-container {
+    display: flex;
+    align-items: center;
+    background-color: rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    padding: 6px 10px;
+    border-radius: 4px; /* Optional: remove this if you want sharp, squared edges like Netflix */
+    backdrop-filter: blur(4px);
+    transition: all 0.3s ease;
+}
+
+/* When the user clicks inside the input, light up the whole container! */
+.netflix-search-container:focus-within {
+    background-color: rgba(0, 0, 0, 0.8);
+    border: 1px solid white;
+}
+
+.search-icon {
+    font-size: 1rem;
+    opacity: 0.6;
+    margin-right: 5px;
+    transition: opacity 0.3s ease;
+}
+
+.netflix-search-container:focus-within .search-icon {
+    opacity: 1; /* Brighten the magnifying glass when active */
+}
+
+.netflix-search-input {
+    background-color: transparent;
+    border: none;
+    color: white;
+    outline: none;
+    font-size: 0.95rem;
+    width: 100px; /* Starts small! */
+    transition: width 0.4s cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+/* Expand smoothly when clicked OR when it has text inside it */
+.netflix-search-input:focus,
+.netflix-search-input:not(:placeholder-shown) {
+    width: 220px;
+}
+
+.clear-icon {
+    cursor: pointer;
+    font-size: 1.1rem;
+    color: #aaa;
+    margin-left: 5px;
+    opacity: 0;
+    pointer-events: none; /* Can't click it when invisible */
+    transition: all 0.2s ease;
+}
+
+/* Show the X only when typing */
+.clear-icon.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.clear-icon:hover {
+    color: white;
+    transform: scale(1.1);
+}

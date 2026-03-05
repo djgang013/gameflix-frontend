@@ -171,15 +171,22 @@ export default function Games() {
                 <div style={styles.navControls}>
                     {/* NEW: PREMIUM SEARCH BAR */}
                     {!isConsoleMode && (
-                        <div style={styles.searchContainer}>
-                            <span style={{ opacity: 0.6 }}>🔍</span>
+                        <div className="netflix-search-container">
+                            <span className="search-icon">🔍</span>
                             <input
                                 type="text"
                                 placeholder="Titles, genres..."
                                 value={searchQuery}
                                 onChange={(e) => setSearchQuery(e.target.value)}
-                                style={styles.searchInput}
+                                className="netflix-search-input"
                             />
+                            {/* The magical 'X' to instantly clear the search */}
+                            <span
+                                className={`clear-icon ${searchQuery ? 'visible' : ''}`}
+                                onClick={() => setSearchQuery('')}
+                            >
+                                ✕
+                            </span>
                         </div>
                     )}
 
@@ -328,7 +335,7 @@ export default function Games() {
                                     {filteredGames.length === 0 ? <p style={styles.noGames}>No games found.</p> : null}
 
                                     {filteredGames.map((game) => {
-                                        const gameStat = recentStats.find(s => s.gamName === game.title);
+
                                         return (
                                             <div key={game.id} className="game-card" onClick={() => navigate(game.gameType === 'CODED' ? game.assetPath : `/play/${game.id}`)}>
                                                 {userRole === 'ROLE_ADMIN' && <button className="delete-btn" style={styles.deleteButton} onClick={(e) => handleDeleteGame(e, game.id)} title="Delete Game">🗑️</button>}
@@ -337,7 +344,7 @@ export default function Games() {
                                                     <div className="game-hover-overlay">
                                                         <p className="hover-desc">{game.description ? game.description : "No description available."}</p>
                                                         <div className="hover-tags"><span className="hover-badge">{game.gameType}</span></div>
-                                                        {gameStat && <div className="hover-playtime">⏱️ {formatTime(gameStat.totalPlayTimeSeconds)}</div>}
+
                                                         <div className="hover-play-btn">▶ PLAY</div>
                                                     </div>
                                                 </div>
@@ -428,4 +435,8 @@ const styles = {
     // --- SEARCH BAR STYLES ---
     searchContainer: { display: 'flex', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '4px', backdropFilter: 'blur(4px)', transition: 'border-color 0.3s' },
     searchInput: { backgroundColor: 'transparent', border: 'none', color: 'white', outline: 'none', paddingLeft: '8px', fontSize: '0.95rem', width: '200px' },
+
+
+
+
 };
