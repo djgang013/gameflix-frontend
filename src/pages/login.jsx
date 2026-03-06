@@ -14,28 +14,23 @@ export default function Login() {
 
     // 3. Handle the form submission
     const handleSubmit = async (e) => {
-        e.preventDefault(); // Prevent the page from refreshing
-        setErrorMessage(''); // Clear any old errors
+        e.preventDefault();
+        setErrorMessage('');
 
         try {
             if (isLoginMode) {
                 // --- LOGIN PROCESS ---
                 const response = await api.post('/auth/login', { username, password });
-
-                // Save the JWT token to the browser's local storage
                 localStorage.setItem('token', response.data.token);
-
-                // Redirect the user to the games dashboard
                 navigate('/games');
             } else {
                 // --- REGISTRATION PROCESS ---
                 await api.post('/auth/register', { username, password });
                 alert("Registration successful! Please log in.");
-                setIsLoginMode(true); // Switch back to login mode
-                setPassword(''); // Clear the password field
+                setIsLoginMode(true);
+                setPassword('');
             }
         } catch (error) {
-            // If Spring Boot throws an error (like 401 Unauthorized or 400 Bad Request)
             if (error.response && error.response.data) {
                 setErrorMessage(error.response.data);
             } else {
@@ -45,11 +40,15 @@ export default function Login() {
     };
 
     return (
-        <div style={styles.container}>
-            <div style={styles.card}>
-                <h2>{isLoginMode ? 'Sign In to Gamesflix' : 'Create an Account'}</h2>
+        <div style={styles.wrapper}>
+            {/* The dark vignette overlay to make the text readable */}
+            <div style={styles.overlay}></div>
 
-                {errorMessage && <p style={styles.error}>{errorMessage}</p>}
+            {/* The Netflix-style floating glass box */}
+            <div style={styles.loginBox}>
+                <h1 style={styles.title}>{isLoginMode ? 'Sign In' : 'Create an Account'}</h1>
+
+                {errorMessage && <div style={styles.errorBox}><p style={styles.errorText}>{errorMessage}</p></div>}
 
                 <form onSubmit={handleSubmit} style={styles.form}>
                     <input
@@ -74,7 +73,7 @@ export default function Login() {
                 </form>
 
                 <p style={styles.toggleText}>
-                    {isLoginMode ? "Don't have an account? " : "Already have an account? "}
+                    {isLoginMode ? "New to Gamesflix? " : "Already have an account? "}
                     <span
                         style={styles.toggleLink}
                         onClick={() => {
@@ -82,7 +81,7 @@ export default function Login() {
                             setErrorMessage('');
                         }}
                     >
-                        {isLoginMode ? 'Sign up here' : 'Log in here'}
+                        {isLoginMode ? 'Sign up now.' : 'Sign in here.'}
                     </span>
                 </p>
             </div>
@@ -90,14 +89,75 @@ export default function Login() {
     );
 }
 
-// Simple inline styles to make it look decent immediately
+// --- PREMIUM NETFLIX STYLES ---
 const styles = {
-    container: { display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', backgroundColor: '#141414', color: 'white', fontFamily: 'Arial, sans-serif' },
-    card: { backgroundColor: '#000000', padding: '40px', borderRadius: '8px', width: '300px', textAlign: 'center', border: '1px solid #333' },
-    form: { display: 'flex', flexDirection: 'column', gap: '15px', marginTop: '20px' },
-    input: { padding: '10px', borderRadius: '4px', border: 'none', backgroundColor: '#333', color: 'white' },
-    button: { padding: '12px', backgroundColor: '#e50914', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' },
-    error: { color: '#e50914', fontSize: '14px' },
-    toggleText: { marginTop: '20px', fontSize: '14px', color: '#b3b3b3' },
-    toggleLink: { color: 'white', cursor: 'pointer', textDecoration: 'underline' }
+    // 1. The Massive Cinematic Background
+    wrapper: {
+        minHeight: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        backgroundImage: 'url("https://images.unsplash.com/photo-1511512578047-dfb367046420?q=80&w=2071&auto=format&fit=crop")',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        position: 'relative',
+        fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
+    },
+
+    // 2. The Dark Vignette
+    overlay: {
+        position: 'absolute',
+        top: 0, left: 0, right: 0, bottom: 0,
+        backgroundColor: 'rgba(0, 0, 0, 0.5)',
+        backgroundImage: 'linear-gradient(to bottom, rgba(0,0,0,0.8) 0%, rgba(0,0,0,0.2) 50%, rgba(0,0,0,0.8) 100%)',
+        zIndex: 1
+    },
+
+    // 3. The Glassmorphism Card
+    loginBox: {
+        backgroundColor: 'rgba(0, 0, 0, 0.75)',
+        padding: '60px 68px 40px',
+        borderRadius: '4px',
+        width: '100%',
+        maxWidth: '450px',
+        zIndex: 2,
+        boxShadow: '0 15px 30px rgba(0,0,0,0.8)',
+        display: 'flex',
+        flexDirection: 'column',
+        backdropFilter: 'blur(10px)'
+    },
+
+    title: { color: 'white', fontSize: '2rem', marginBottom: '28px', fontWeight: 'bold' },
+    form: { display: 'flex', flexDirection: 'column', gap: '16px' },
+
+    input: {
+        backgroundColor: '#333',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        padding: '16px 20px',
+        fontSize: '1rem',
+        outline: 'none'
+    },
+
+    button: {
+        backgroundColor: '#e50914',
+        color: 'white',
+        border: 'none',
+        borderRadius: '4px',
+        padding: '16px',
+        fontSize: '1rem',
+        fontWeight: 'bold',
+        cursor: 'pointer',
+        marginTop: '24px',
+        transition: 'background-color 0.2s'
+    },
+
+    // Sleek Error Box
+    errorBox: { backgroundColor: '#e87c03', borderRadius: '4px', padding: '10px 20px', marginBottom: '16px' },
+    errorText: { color: 'white', fontSize: '14px', margin: 0 },
+
+    // Footer toggles
+    toggleText: { color: '#737373', marginTop: '40px', fontSize: '1rem' },
+    toggleLink: { color: 'white', cursor: 'pointer', textDecoration: 'none', fontWeight: '500' }
 };
