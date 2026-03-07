@@ -3,8 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 import AddGameModal from '../components/AddGameModal';
+import EditGameModal from '../components/EditGameModal';
 
 export default function Games() {
+    const [editingGame, setEditingGame] = useState(null);
     const [recentStats, setRecentStats] = useState([]);
     const [games, setGames] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -338,7 +340,26 @@ export default function Games() {
 
                                         return (
                                             <div key={game.id} className="game-card" onClick={() => navigate(game.gameType === 'CODED' ? game.assetPath : `/play/${game.id}`)}>
-                                                {userRole === 'ROLE_ADMIN' && <button className="delete-btn" style={styles.deleteButton} onClick={(e) => handleDeleteGame(e, game.id)} title="Delete Game">🗑️</button>}
+                                                {userRole === 'ROLE_ADMIN' && (
+                                                    <>
+                                                        <button
+                                                            className="edit-btn"
+                                                            style={styles.editButton}
+                                                            onClick={(e) => { e.stopPropagation(); setEditingGame(game); }}
+                                                            title="Edit Game"
+                                                        >
+                                                            ✏️
+                                                        </button>
+                                                        <button
+                                                            className="delete-btn"
+                                                            style={styles.deleteButton}
+                                                            onClick={(e) => handleDeleteGame(e, game.id)}
+                                                            title="Delete Game"
+                                                        >
+                                                            🗑️
+                                                        </button>
+                                                    </>
+                                                )}
                                                 <div className="game-poster-wrapper">
                                                     <img src={game.thumbnailUrl || 'https://placehold.co/400x600/222222/FFFFFF/png?text=No+Cover'} alt={game.title} className="game-poster" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x600/141414/e50914/png?text=Image+Error'; }} />
                                                     <div className="game-hover-overlay">
@@ -359,6 +380,12 @@ export default function Games() {
                 )}
             </div>
             <AddGameModal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} onGameAdded={() => { setIsAddModalOpen(false); fetchGames(); }} />
+            <EditGameModal
+                isOpen={!!editingGame}
+                game={editingGame}
+                onClose={() => setEditingGame(null)}
+                onGameUpdated={() => { setEditingGame(null); fetchGames(); }}
+            />
         </div>
     );
 }
@@ -414,10 +441,13 @@ const styles = {
     sectionTitle: { fontSize: '1.4rem', color: '#fff', marginBottom: '20px', fontWeight: 'bold' },
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' },
     deleteButton: { position: 'absolute', top: '10px', right: '10px', backgroundColor: 'rgba(20, 20, 20, 0.8)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 20, backdropFilter: 'blur(4px)' },
+    editButton: { position: 'absolute', top: '10px', right: '50px', backgroundColor: 'rgba(20, 20, 20, 0.8)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 20, backdropFilter: 'blur(4px)' },
     cardTitle: { marginTop: '10px', color: '#e5e5e5', fontSize: '1rem', textAlign: 'center', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
     recentCard: { minWidth: '280px', backgroundColor: '#1c1c1c', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #333' },
     recentImage: { width: '100%', height: '120px', objectFit: 'cover', borderBottom: '2px solid #e50914' },
     recentInfo: { padding: '15px' },
+
+
 
     // --- STEAM BIG PICTURE STYLES ---
     steamContainer: { height: '100vh', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingTop: '40px' },
