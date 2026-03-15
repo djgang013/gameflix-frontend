@@ -46,7 +46,7 @@ export default function Login() {
 
             {/* The Netflix-style floating glass box */}
             <div style={styles.loginBox}>
-                <h1 style={styles.title}>{isLoginMode ? 'Sign In' : 'Create an Account'}</h1>
+                <h1 style={styles.title}>{isLoginMode ? 'Sign In' : 'Sign up'}</h1>
 
                 {errorMessage && <div style={styles.errorBox}><p style={styles.errorText}>{errorMessage}</p></div>}
 
@@ -127,7 +127,7 @@ const styles = {
         backdropFilter: 'blur(10px)'
     },
 
-    title: { color: 'white', fontSize: '2rem', marginBottom: '28px', fontWeight: 'bold' },
+    title: { color: 'white', fontSize: '2rem', marginBottom: '28px', fontWeight: 'bold',marginLeft:'150px'},
     form: { display: 'flex', flexDirection: 'column', gap: '16px' },
 
     input: {
