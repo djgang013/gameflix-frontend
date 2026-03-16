@@ -43,9 +43,11 @@ export default function Login() {
         <div style={styles.wrapper}>
             {/* The dark vignette overlay to make the text readable */}
             <div style={styles.overlay}></div>
-
+            <h1 style={styles.logo}>GAMESFLIX</h1>
             {/* The Netflix-style floating glass box */}
             <div style={styles.loginBox}>
+
+
                 <h1 style={styles.title}>{isLoginMode ? 'Sign In' : 'Sign up'}</h1>
 
                 {errorMessage && <div style={styles.errorBox}><p style={styles.errorText}>{errorMessage}</p></div>}
@@ -103,6 +105,24 @@ const styles = {
         position: 'relative',
         fontFamily: "'Helvetica Neue', Helvetica, Arial, sans-serif"
     },
+    logo: {
+        margin: 0,
+        color: '#e50914',
+        fontSize: '42px',
+        fontFamily: '"Arial Black", Impact, sans-serif',
+        fontWeight: '900',
+        letterSpacing: '-2px',
+        display: 'inline-block',
+        textShadow: '2px 2px 4px rgba(0,0,0,0.8)',
+        cursor: 'pointer',
+        zIndex: 10,
+
+        // --- UPDATED STYLES FOR TOP-CENTER PLACEMENT ---
+        position: 'absolute',
+        top: '30px',
+        left: '50%',
+        transform: 'translateX(-50%) scaleY(1.3)', // Combines centering with your stretch effect
+    },
 
     // 2. The Dark Vignette
     overlay: {
@@ -127,7 +147,7 @@ const styles = {
         backdropFilter: 'blur(10px)'
     },
 
-    title: { color: 'white', fontSize: '2rem', marginBottom: '28px', fontWeight: 'bold',marginLeft:'150px'},
+    title: { color: 'white', fontSize: '2rem', marginBottom: '28px', fontWeight: 'bold',alignSelf: 'center'},
     form: { display: 'flex', flexDirection: 'column', gap: '16px' },
 
     input: {
