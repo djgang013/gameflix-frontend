@@ -295,3 +295,30 @@ body { margin: 0; background-color: #141414; }
     box-shadow: 0 10px 20px rgba(0,0,0,0.5);
     border-color: rgba(255,255,255,0.3) !important;
 }
+/* --- CINEMATIC LOGIN INTRO --- */
+.cinematic-logo-intro {
+    margin: 0;
+    color: #e50914;
+    font-size: 70px; /* Massive font for the center of the screen */
+    font-family: "Arial Black", Impact, sans-serif;
+    font-weight: 900;
+    letter-spacing: -2px;
+    text-shadow: 0 0 20px rgba(229, 9, 20, 0.6); /* Red glowing shadow! */
+
+    /* Play the animation once, lasting exactly 2.5 seconds */
+    animation: netflixZoom 2.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+}
+
+@keyframes netflixZoom {
+    0% {
+        opacity: 0;
+        transform: scaleY(1.3) scale(0.5); /* Start small and transparent */
+    }
+    40% {
+        opacity: 1; /* Fully visible halfway through */
+    }
+    100% {
+        opacity: 1;
+        transform: scaleY(1.3) scale(1.1); /* Slowly creep toward the screen */
+    }
+}

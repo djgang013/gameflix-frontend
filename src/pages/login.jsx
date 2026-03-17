@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import Lottie from 'lottie-react';
+import animationData from '../assets/gamesflix-logo.json';
 
 export default function Login() {
     // 1. Manage the form inputs and UI state
@@ -10,21 +12,29 @@ export default function Login() {
     const [errorMessage, setErrorMessage] = useState('');
 
     // 2. This hook allows us to redirect the user after they log in
+    // NEW: State to track if the cinematic intro is playing
+    const [isAnimating, setIsAnimating] = useState(false);
+
     const navigate = useNavigate();
 
-    // 3. Handle the form submission
     const handleSubmit = async (e) => {
         e.preventDefault();
         setErrorMessage('');
 
         try {
             if (isLoginMode) {
-                // --- LOGIN PROCESS ---
                 const response = await api.post('/auth/login', { username, password });
                 localStorage.setItem('token', response.data.token);
-                navigate('/games');
+
+                // INSTEAD OF NAVIGATING, START THE ANIMATION!
+                setIsAnimating(true);
+
+                // Wait 2.5 seconds for the logo to animate, then go to games!
+                setTimeout(() => {
+                    navigate('/games');
+                }, 2500);
+
             } else {
-                // --- REGISTRATION PROCESS ---
                 await api.post('/auth/register', { username, password });
                 alert("Registration successful! Please log in.");
                 setIsLoginMode(true);
@@ -38,6 +48,28 @@ export default function Login() {
             }
         }
     };
+
+    // --- NEW: THE CINEMATIC TRANSITION SCREEN ---
+    // --- THE CINEMATIC TRANSITION SCREEN ---
+    // --- THE CINEMATIC TRANSITION SCREEN (PURE CSS!) ---
+    if (isAnimating) {
+        return (
+            <div style={{
+                height: '100vh',
+                width: '100vw',
+                backgroundColor: '#000', // Pitch black background
+                display: 'flex',
+                justifyContent: 'center',
+                alignItems: 'center',
+                overflow: 'hidden'
+            }}>
+                {/* Notice we apply the class from index.css here! */}
+                <h1 className="cinematic-logo-intro">
+                    GAMESFLIX
+                </h1>
+            </div>
+        );
+    }
 
     return (
         <div style={styles.wrapper}>
