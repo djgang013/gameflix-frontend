@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback,useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
@@ -24,6 +24,16 @@ export default function Games() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const navigate = useNavigate();
+    const rowRef = useRef(null);
+
+    const handleScroll = (direction) => {
+        if (rowRef.current) {
+            const { current } = rowRef;
+            // Scrolls about one and a half cards at a time (400px)
+            const scrollAmount = direction === 'left' ? -400 : 400;
+            current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+        }
+    };
 
     // 1. Load User Role
     useEffect(() => {
@@ -306,22 +316,47 @@ export default function Games() {
 
                             {/* ONLY SHOW CONTINUE PLAYING IF NOT SEARCHING */}
                             {searchQuery === '' && recentStats.filter(s => s.gamName && s.gamName !== 'undefined').length > 0 && (
-                                <div style={{ marginBottom: '40px' }}>
+                                <div style={{ marginBottom: '40px', position: 'relative' }}>
                                     <h3 style={styles.sectionTitle}>Continue Playing</h3>
-                                    <div style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
-                                        {recentStats.filter(s => s.gamName && s.gamName !== 'undefined').map(stat => {
-                                            const matchingGame = games.find(g => g.title === stat.gamName);
-                                            const imageSrc = matchingGame?.thumbnailUrl || 'https://placehold.co/300x150/222/fff?text=' + stat.gamName;
-                                            return (
-                                                <div key={stat.id} style={styles.recentCard} onClick={() => matchingGame && navigate(matchingGame.gameType === 'CODED' ? matchingGame.assetPath : `/play/${matchingGame.id}`)}>
-                                                    <img src={imageSrc} style={styles.recentImage} alt={stat.gamName} />
-                                                    <div style={styles.recentInfo}>
-                                                        <h4 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{stat.gamName}</h4>
-                                                        <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem' }}>⏱️ Total Time: <span style={{ color: '#4caf50', fontWeight: 'bold' }}>{formatTime(stat.totalPlayTimeSeconds)}</span></p>
+
+                                    {/* NEW: WRAPPER FOR THE ARROWS */}
+                                    <div style={styles.rowWrapper}>
+
+                                        {/* LEFT ARROW */}
+                                        <button
+                                            className="row-arrow"
+                                            style={{...styles.rowArrow, left: '-20px', background: 'linear-gradient(to right, rgba(20,20,20,1) 0%, rgba(20,20,20,0) 100%)'}}
+                                            onClick={() => handleScroll('left')}
+                                        >
+                                            ❮
+                                        </button>
+
+                                        {/* SCROLLABLE CONTAINER (Added ref={rowRef}) */}
+                                        <div ref={rowRef} className="hide-scroll" style={{ display: 'flex', gap: '20px', overflowX: 'auto', paddingBottom: '10px' }}>
+                                            {recentStats.filter(s => s.gamName && s.gamName !== 'undefined').map(stat => {
+                                                const matchingGame = games.find(g => g.title === stat.gamName);
+                                                const imageSrc = matchingGame?.thumbnailUrl || 'https://placehold.co/300x150/222/fff?text=' + stat.gamName;
+                                                return (
+                                                    <div key={stat.id} style={styles.recentCard} onClick={() => matchingGame && navigate(matchingGame.gameType === 'CODED' ? matchingGame.assetPath : `/play/${matchingGame.id}`)}>
+                                                        <img src={imageSrc} style={styles.recentImage} alt={stat.gamName} />
+                                                        <div style={styles.recentInfo}>
+                                                            <h4 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{stat.gamName}</h4>
+                                                            <p style={{ margin: 0, color: '#aaa', fontSize: '0.9rem' }}>⏱️ Total Time: <span style={{ color: '#4caf50', fontWeight: 'bold' }}>{formatTime(stat.totalPlayTimeSeconds)}</span></p>
+                                                        </div>
                                                     </div>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            })}
+                                        </div>
+
+
+                                        <button
+                                            className="row-arrow"
+                                            style={{...styles.rowArrow, right: '-20px', background: 'linear-gradient(to left, rgba(20,20,20,1) 0%, rgba(20,20,20,0) 100%)'}}
+                                            onClick={() => handleScroll('right')}
+                                        >
+                                            ❯
+                                        </button>
+
                                     </div>
                                 </div>
                             )}
@@ -465,7 +500,23 @@ const styles = {
     // --- SEARCH BAR STYLES ---
     searchContainer: { display: 'flex', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.6)', border: '1px solid rgba(255,255,255,0.2)', padding: '6px 12px', borderRadius: '4px', backdropFilter: 'blur(4px)', transition: 'border-color 0.3s' },
     searchInput: { backgroundColor: 'transparent', border: 'none', color: 'white', outline: 'none', paddingLeft: '8px', fontSize: '0.95rem', width: '200px' },
-
+    rowWrapper: { position: 'relative', display: 'flex', alignItems: 'center' },
+    rowArrow: {
+        position: 'absolute',
+        top: 0,
+        bottom: '10px',
+        width: '50px',
+        color: '#fff',
+        fontSize: '2.5rem',
+        border: 'none',
+        cursor: 'pointer',
+        zIndex: 10,
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        opacity: 0.8,
+        transition: 'transform 0.2s, opacity 0.2s'
+    },
 
 
 
