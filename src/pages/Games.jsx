@@ -4,6 +4,7 @@ import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 import AddGameModal from '../components/AddGameModal';
 import EditGameModal from '../components/EditGameModal';
+import SubscribeModal from '../components/SubscribeModal';
 
 export default function Games() {
     const [editingGame, setEditingGame] = useState(null);
@@ -22,6 +23,9 @@ export default function Games() {
     const [activeIndex, setActiveIndex] = useState(0); // For Console Mode
     const [featuredIndex, setFeaturedIndex] = useState(0); // For Desktop Billboard
     const [searchQuery, setSearchQuery] = useState('');
+    const [billingStatus, setBillingStatus] = useState({ subscriptionActive: false });
+    const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
+    const [selectedPaidGame, setSelectedPaidGame] = useState(null);
 
     const navigate = useNavigate();
     const rowRef = useRef(null);
@@ -66,12 +70,14 @@ export default function Games() {
 
     const fetchGames = async () => {
         try {
-            const [gamesResponse, statsResponse] = await Promise.all([
+            const [gamesResponse, statsResponse, billingResponse] = await Promise.all([
                 api.get('/games'),
-                api.get('/stats/recent')
+                api.get('/stats/recent'),
+                api.get('/billing/status')
             ]);
             setGames(gamesResponse.data);
             setRecentStats(statsResponse.data);
+            setBillingStatus(billingResponse.data);
             setLoading(false);
         } catch (err) {
             setError('Failed to load dashboard data.');
@@ -98,11 +104,40 @@ export default function Games() {
         navigate('/login');
     };
 
+    const goToGame = (game) => {
+        navigate(game.gameType === 'CODED' ? game.assetPath : `/play/${game.id}`);
+    };
+
+    const handleGameStart = (game) => {
+        const isCodedGame = game.gameType === 'CODED';
+        if (isCodedGame && !billingStatus.subscriptionActive) {
+            setSelectedPaidGame(game);
+            setIsSubscribeModalOpen(true);
+            return;
+        }
+        goToGame(game);
+    };
+
     const handlePlayActive = useCallback(() => {
         if (games.length === 0) return;
         const game = games[activeIndex];
-        navigate(game.gameType === 'CODED' ? game.assetPath : `/play/${game.id}`);
-    }, [games, activeIndex, navigate]);
+        handleGameStart(game);
+    }, [games, activeIndex, billingStatus.subscriptionActive]);
+
+    const handleSubscribe = async () => {
+        try {
+            const sessionRes = await api.post('/billing/checkout-session');
+            const checkoutUrl = sessionRes?.data?.checkoutUrl;
+            if (!checkoutUrl) {
+                throw new Error('Stripe checkout URL was not returned');
+            }
+            window.location.href = checkoutUrl;
+        } catch (err) {
+            console.error(err);
+            setError('Failed to start Stripe checkout. Please try again.');
+            setIsSubscribeModalOpen(false);
+        }
+    };
 
     // --- CONSOLE MODE CONTROLS ---
     useEffect(() => {
@@ -274,7 +309,7 @@ export default function Games() {
                                 <div style={styles.billboardContainer}>
                                     <button style={styles.arrowBtn} onClick={() => setFeaturedIndex(prev => prev === 0 ? featuredGames.length - 1 : prev - 1)}>❮</button>
 
-                                    <div className="billboard-card" onClick={() => navigate(currentFeatured.gameType === 'CODED' ? currentFeatured.assetPath : `/play/${currentFeatured.id}`)}>
+                                    <div className="billboard-card" onClick={() => handleGameStart(currentFeatured)}>
                                         <div style={styles.billboardLeft}>
                                             <div style={{...styles.billboardBlurBg, backgroundImage: `url(${currentFeatured.thumbnailUrl || 'https://placehold.co/800x400/222/fff'})`}} />
                                             <img src={currentFeatured.thumbnailUrl || 'https://placehold.co/800x400/222/fff'} alt={currentFeatured.title} style={styles.billboardImg} />
@@ -291,6 +326,7 @@ export default function Games() {
                                             <div style={styles.billboardTags}>
                                                 <span className="hover-badge">{currentFeatured.gameType}</span>
                                                 <span className="hover-badge">Featured</span>
+                                                {currentFeatured.gameType === 'CODED' && <span className="hover-badge">Paid</span>}
                                             </div>
 
                                             <div style={styles.billboardAction}>
@@ -337,7 +373,7 @@ export default function Games() {
                                                 const matchingGame = games.find(g => g.title === stat.gamName);
                                                 const imageSrc = matchingGame?.thumbnailUrl || 'https://placehold.co/300x150/222/fff?text=' + stat.gamName;
                                                 return (
-                                                    <div key={stat.id} style={styles.recentCard} onClick={() => matchingGame && navigate(matchingGame.gameType === 'CODED' ? matchingGame.assetPath : `/play/${matchingGame.id}`)}>
+                                                    <div key={stat.id} style={styles.recentCard} onClick={() => matchingGame && handleGameStart(matchingGame)}>
                                                         <img src={imageSrc} style={styles.recentImage} alt={stat.gamName} />
                                                         <div style={styles.recentInfo}>
                                                             <h4 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{stat.gamName}</h4>
@@ -374,7 +410,7 @@ export default function Games() {
                                     {filteredGames.map((game) => {
 
                                         return (
-                                            <div key={game.id} className="game-card" onClick={() => navigate(game.gameType === 'CODED' ? game.assetPath : `/play/${game.id}`)}>
+                                            <div key={game.id} className="game-card" onClick={() => handleGameStart(game)}>
                                                 {userRole === 'ROLE_ADMIN' && (
                                                     <>
                                                         <button
@@ -401,7 +437,7 @@ export default function Games() {
                                                         <p className="hover-desc">{game.description ? game.description : "No description available."}</p>
                                                         <div className="hover-tags"><span className="hover-badge">{game.gameType}</span></div>
 
-                                                        <div className="hover-play-btn">▶ PLAY</div>
+                                                        <div className="hover-play-btn">▶ {game.gameType === 'CODED' && !billingStatus.subscriptionActive ? 'SUBSCRIBE' : 'PLAY'}</div>
                                                     </div>
                                                 </div>
                                                 <h3 style={styles.cardTitle}>{game.title}</h3>
@@ -420,6 +456,12 @@ export default function Games() {
                 game={editingGame}
                 onClose={() => setEditingGame(null)}
                 onGameUpdated={() => { setEditingGame(null); fetchGames(); }}
+            />
+            <SubscribeModal
+                isOpen={isSubscribeModalOpen}
+                onClose={() => setIsSubscribeModalOpen(false)}
+                onSubscribe={handleSubscribe}
+                gameTitle={selectedPaidGame?.title}
             />
         </div>
     );
