@@ -26,9 +26,12 @@ export default function Games() {
     const [billingStatus, setBillingStatus] = useState({ subscriptionActive: false });
     const [isSubscribeModalOpen, setIsSubscribeModalOpen] = useState(false);
     const [selectedPaidGame, setSelectedPaidGame] = useState(null);
+    const [subscribeModalAction, setSubscribeModalAction] = useState('subscribe');
 
     const navigate = useNavigate();
     const rowRef = useRef(null);
+    const gamepadInputRef = useRef({ lastActionTime: 0, prevA: false, prevB: false });
+    const subscribeModalOpenedAtRef = useRef(0);
 
     const handleScroll = (direction) => {
         if (rowRef.current) {
@@ -112,11 +115,19 @@ export default function Games() {
         const isCodedGame = game.gameType === 'CODED';
         if (isCodedGame && !billingStatus.subscriptionActive) {
             setSelectedPaidGame(game);
+            setSubscribeModalAction('subscribe');
+            subscribeModalOpenedAtRef.current = Date.now();
             setIsSubscribeModalOpen(true);
             return;
         }
         goToGame(game);
     };
+
+    const closeSubscribeModal = useCallback(() => {
+        setIsSubscribeModalOpen(false);
+        setSelectedPaidGame(null);
+        setSubscribeModalAction('subscribe');
+    }, []);
 
     const handlePlayActive = useCallback(() => {
         if (games.length === 0) return;
@@ -124,7 +135,7 @@ export default function Games() {
         handleGameStart(game);
     }, [games, activeIndex, billingStatus.subscriptionActive]);
 
-    const handleSubscribe = async () => {
+    const handleSubscribe = useCallback(async () => {
         try {
             const sessionRes = await api.post('/billing/checkout-session');
             const checkoutUrl = sessionRes?.data?.checkoutUrl;
@@ -135,35 +146,90 @@ export default function Games() {
         } catch (err) {
             console.error(err);
             setError('Failed to start Stripe checkout. Please try again.');
-            setIsSubscribeModalOpen(false);
+            closeSubscribeModal();
         }
-    };
+    }, [closeSubscribeModal]);
 
     // --- CONSOLE MODE CONTROLS ---
     useEffect(() => {
         if (!isConsoleMode || games.length === 0) return;
 
         const handleKeyDown = (e) => {
-            if (e.key === 'ArrowLeft') setActiveIndex(prev => Math.max(0, prev - 1));
-            if (e.key === 'ArrowRight') setActiveIndex(prev => Math.min(games.length - 1, prev + 1));
-            if (e.key === 'Enter') handlePlayActive();
-            if (e.key === 'Escape') setIsConsoleMode(false);
+            if (isSubscribeModalOpen) {
+                if (e.key === 'ArrowLeft') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSubscribeModalAction('cancel');
+                }
+                if (e.key === 'ArrowRight') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    setSubscribeModalAction('subscribe');
+                }
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (Date.now() - subscribeModalOpenedAtRef.current > 220) {
+                        if (subscribeModalAction === 'subscribe') {
+                            handleSubscribe();
+                        } else {
+                            closeSubscribeModal();
+                        }
+                    }
+                }
+                if (e.key === 'Escape') {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeSubscribeModal();
+                }
+                return;
+            }
+
+            if (e.key === 'ArrowLeft') {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveIndex(prev => Math.max(0, prev - 1));
+            }
+            if (e.key === 'ArrowRight') {
+                e.preventDefault();
+                e.stopPropagation();
+                setActiveIndex(prev => Math.min(games.length - 1, prev + 1));
+            }
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                e.stopPropagation();
+                handlePlayActive();
+            }
         };
         window.addEventListener('keydown', handleKeyDown);
 
         let animationFrameId;
-        let lastActionTime = 0;
         const pollGamepads = () => {
             const gamepads = navigator.getGamepads();
             if (gamepads[0]) {
                 const gp = gamepads[0];
                 const now = Date.now();
-                if (now - lastActionTime > 200) {
-                    if (gp.buttons[14].pressed || gp.axes[0] < -0.5) { setActiveIndex(prev => Math.max(0, prev - 1)); lastActionTime = now; }
-                    else if (gp.buttons[15].pressed || gp.axes[0] > 0.5) { setActiveIndex(prev => Math.min(games.length - 1, prev + 1)); lastActionTime = now; }
-                    else if (gp.buttons[0].pressed) { handlePlayActive(); lastActionTime = now; }
-                    else if (gp.buttons[1].pressed) { setIsConsoleMode(false); lastActionTime = now; }
+                const aPressed = Boolean(gp.buttons[0]?.pressed);
+                const bPressed = Boolean(gp.buttons[1]?.pressed);
+                const justAPressed = aPressed && !gamepadInputRef.current.prevA;
+                const justBPressed = bPressed && !gamepadInputRef.current.prevB;
+
+                if (now - gamepadInputRef.current.lastActionTime > 200) {
+                    if (isSubscribeModalOpen) {
+                        if (justAPressed) { handleSubscribe(); gamepadInputRef.current.lastActionTime = now; }
+                        else if (justBPressed) { closeSubscribeModal(); gamepadInputRef.current.lastActionTime = now; }
+                    } else {
+                        if (gp.buttons[14].pressed || gp.axes[0] < -0.5) { setActiveIndex(prev => Math.max(0, prev - 1)); gamepadInputRef.current.lastActionTime = now; }
+                        else if (gp.buttons[15].pressed || gp.axes[0] > 0.5) { setActiveIndex(prev => Math.min(games.length - 1, prev + 1)); gamepadInputRef.current.lastActionTime = now; }
+                        else if (justAPressed) { handlePlayActive(); gamepadInputRef.current.lastActionTime = now; }
+                    }
                 }
+
+                gamepadInputRef.current.prevA = aPressed;
+                gamepadInputRef.current.prevB = bPressed;
+            } else {
+                gamepadInputRef.current.prevA = false;
+                gamepadInputRef.current.prevB = false;
             }
             animationFrameId = requestAnimationFrame(pollGamepads);
         };
@@ -173,7 +239,7 @@ export default function Games() {
             window.removeEventListener('keydown', handleKeyDown);
             cancelAnimationFrame(animationFrameId);
         };
-    }, [isConsoleMode, games.length, activeIndex, handlePlayActive]);
+    }, [isConsoleMode, games.length, activeIndex, handlePlayActive, isSubscribeModalOpen, handleSubscribe, subscribeModalAction, closeSubscribeModal]);
 
     if (loading) return <div style={styles.loadingScreen}><h2>Loading Gamesflix...</h2></div>;
 
@@ -252,7 +318,7 @@ export default function Games() {
                             src={`https://ui-avatars.com/api/?name=${username}&background=e50914&color=fff&size=40&bold=true`}
                             alt="Profile"
                             className="netflix-avatar"
-                            onClick={() => navigate('/profile')}
+                            onClick={() => navigate('/profile', { state: { defaultTab: 'profile' } })}
                             title="View Profile"
                         />
                     )}
@@ -331,7 +397,14 @@ export default function Games() {
 
                                             <div style={styles.billboardAction}>
                                                 <div style={{ fontSize: '0.8rem', color: '#acb2b8' }}>Available Now</div>
-                                                <button style={styles.playNowBtn}>Play Now</button>
+                                                <button
+                                                    style={{
+                                                        ...styles.playNowBtn,
+                                                        backgroundColor: currentFeatured.gameType === 'CODED' && !billingStatus.subscriptionActive ? '#e50914' : styles.playNowBtn.backgroundColor
+                                                    }}
+                                                >
+                                                    {currentFeatured.gameType === 'CODED' && !billingStatus.subscriptionActive ? 'Subscribe' : 'Play Now'}
+                                                </button>
                                             </div>
                                         </div>
                                     </div>
@@ -459,9 +532,12 @@ export default function Games() {
             />
             <SubscribeModal
                 isOpen={isSubscribeModalOpen}
-                onClose={() => setIsSubscribeModalOpen(false)}
+                onClose={closeSubscribeModal}
                 onSubscribe={handleSubscribe}
                 gameTitle={selectedPaidGame?.title}
+                isConsoleMode={isConsoleMode}
+                selectedAction={subscribeModalAction}
+                onActionChange={setSubscribeModalAction}
             />
         </div>
     );

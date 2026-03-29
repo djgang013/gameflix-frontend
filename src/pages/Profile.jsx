@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import api from '../services/api';
 
 export default function Profile() {
     const [stats, setStats] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [activeTab, setActiveTab] = useState(() => localStorage.getItem('activeProfileTab') || 'profile');
+    const [activeTab, setActiveTab] = useState(() => sessionStorage.getItem('activeProfileTab') || 'profile');
     const [message, setMessage] = useState('');
 
     const [profileData, setProfileData] = useState({
@@ -33,6 +33,20 @@ export default function Profile() {
     const [newPassword, setNewPassword] = useState('');
 
     const navigate = useNavigate();
+    const location = useLocation();
+
+    useEffect(() => {
+        if (location.state?.defaultTab) {
+            const tab = location.state?.defaultTab || 'profile';
+            setActiveTab(tab);
+            sessionStorage.setItem('activeProfileTab', tab);
+            navigate('/profile', { replace: true, state: {} });
+        }
+    }, [location.state, navigate]);
+
+    useEffect(() => {
+        sessionStorage.setItem('activeProfileTab', activeTab);
+    }, [activeTab]);
 
     useEffect(() => {
         const loadData = async () => {
@@ -48,11 +62,11 @@ export default function Profile() {
                         await api.get('/billing/confirm', { params: { sessionId } });
                         sessionStorage.setItem(confirmKey, '1');
                     }
-                    setMessage('Subscription activated. Payment confirmed by Stripe.');
+                    setMessage('Subscription activated.');
                     setTimeout(() => navigate('/games'), 1500);
                     return;
                 } else if (billingResult === 'cancel') {
-                    setMessage('Stripe checkout canceled. No payment was taken.');
+                    setMessage('Checkout canceled.');
                     window.history.replaceState({}, document.title, '/profile');
                 }
 
@@ -91,10 +105,6 @@ export default function Profile() {
 
         loadData();
     }, []);
-
-    useEffect(() => {
-        localStorage.setItem('activeProfileTab', activeTab);
-    }, [activeTab]);
 
     if (loading) return <div style={styles.loadingScreen}><h2>Loading Profile...</h2></div>;
 
@@ -192,7 +202,7 @@ export default function Profile() {
             const sessionRes = await api.post('/billing/checkout-session');
             const checkoutUrl = sessionRes?.data?.checkoutUrl;
             if (!checkoutUrl) {
-                throw new Error('Stripe checkout URL was not returned');
+                throw new Error('Checkout URL was not returned');
             }
             window.location.href = checkoutUrl;
         } catch (err) {
@@ -205,7 +215,7 @@ export default function Profile() {
         try {
             await api.post('/billing/cancel');
             await refreshBillingData();
-            setMessage('Subscription will remain active until the expiration date, then it will stop.');
+            setMessage('Subscription will remain active until the expiration date.');
         } catch (err) {
             console.error(err);
             setMessage('Failed to cancel subscription.');
@@ -251,7 +261,8 @@ export default function Profile() {
 
             <div style={styles.content}>
                 <div style={styles.tabRow}>
-                    <button style={{ ...styles.tabButton, ...(activeTab === 'profile' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('profile')}>Profile</button>
+                    <button style={{ ...styles.tabButton, ...(activeTab === 'profile' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('profile')}>Profile Settings</button>
+                    <button style={{ ...styles.tabButton, ...(activeTab === 'stats' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('stats')}>Stats</button>
                     <button style={{ ...styles.tabButton, ...(activeTab === 'billing' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('billing')}>Facturation</button>
                 </div>
 
@@ -278,8 +289,12 @@ export default function Profile() {
                                 <button onClick={handleChangePassword} style={styles.actionButton}>Change Password</button>
                             </div>
                         </div>
+                    </>
+                )}
 
-                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Lifetime Stats</h2>
+                {activeTab === 'stats' && (
+                    <>
+                        <h2 style={styles.sectionTitle}>Lifetime Stats</h2>
                         <div style={styles.summaryGrid}>
                             <div style={styles.statCard}>
                                 <div style={styles.statValue}>{formatTime(totalSecondsPlayed)}</div>
@@ -321,8 +336,8 @@ export default function Profile() {
                             <div style={styles.statCard}>
                                 <div style={styles.statValue}>{billingData.subscriptionActive ? 'Active' : 'Inactive'}</div>
                                 <div style={styles.statLabel}>Subscription</div>
-                                <p style={styles.smallLine}>Plan: {billingData.planName || 'Gamer'}</p>
-                                <p style={styles.smallLine}>Expires: {formatBillingDate(billingData.subscriptionEndsAt)}</p>
+                                <p style={styles.smallLine}>Plan: {billingData.subscriptionActive ? (billingData.planName || 'Gamer') : 'Free'}</p>
+                                <p style={styles.smallLine}>Expires: {billingData.subscriptionActive ? formatBillingDate(billingData.subscriptionEndsAt) : '—'}</p>
                                 {billingData.subscriptionActive && billingData.cancelAtPeriodEnd && (
                                     <p style={styles.warningLine}>Cancellation scheduled. Access remains active until expiry.</p>
                                 )}
