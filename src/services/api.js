@@ -3,6 +3,7 @@ import axios from 'axios';
 // Create a base instance pointing to your Spring Boot server
 const api = axios.create({
     baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:8080/api',
+    withCredentials: true,
 });
 
 // This intercepts every request BEFORE it leaves React

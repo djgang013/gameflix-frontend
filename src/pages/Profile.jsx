@@ -13,19 +13,18 @@ export default function Profile() {
         username: 'Player',
         role: 'USER',
         displayName: 'Player',
-        avatarUrl: '',
-        subscriptionActive: false,
-        subscriptionEndsAt: null
+        avatarUrl: ''
     });
 
     const [billingData, setBillingData] = useState({
-        subscriptionActive: false,
-        cancelAtPeriodEnd: false,
-        subscriptionEndsAt: null,
-        planName: 'Gamer'
+        planName: 'Game Ownership',
+        ownedGamesCount: 0,
+        cartItemsCount: 0
     });
     const [paymentSummary, setPaymentSummary] = useState('Aucun moyen de paiement enregistre');
     const [invoices, setInvoices] = useState([]);
+    const [ownedGames, setOwnedGames] = useState([]);
+    const [orders, setOrders] = useState([]);
 
     const [displayNameInput, setDisplayNameInput] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
@@ -51,25 +50,6 @@ export default function Profile() {
     useEffect(() => {
         const loadData = async () => {
             try {
-                const params = new URLSearchParams(window.location.search);
-                const billingResult = params.get('billing');
-                const sessionId = params.get('session_id');
-
-                if (billingResult === 'success' && sessionId) {
-                    const confirmKey = `billing_confirmed_${sessionId}`;
-                    const alreadyConfirmed = sessionStorage.getItem(confirmKey) === '1';
-                    if (!alreadyConfirmed) {
-                        await api.get('/billing/confirm', { params: { sessionId } });
-                        sessionStorage.setItem(confirmKey, '1');
-                    }
-                    setMessage('Subscription activated.');
-                    setTimeout(() => navigate('/games'), 1500);
-                    return;
-                } else if (billingResult === 'cancel') {
-                    setMessage('Checkout canceled.');
-                    window.history.replaceState({}, document.title, '/profile');
-                }
-
                 const token = localStorage.getItem('token');
                 if (token) {
                     const decoded = jwtDecode(token);
@@ -88,6 +68,11 @@ export default function Profile() {
                     api.get('/billing/invoices')
                 ]);
 
+                const [ownedRes, ordersRes] = await Promise.all([
+                    api.get('/billing/owned-games'),
+                    api.get('/billing/orders')
+                ]);
+
                 const validStats = statsRes.data.filter((s) => s.gamName && s.gamName !== 'undefined');
                 setStats(validStats);
 
@@ -96,6 +81,8 @@ export default function Profile() {
                 setBillingData(statusRes.data);
                 setPaymentSummary(paymentRes.data.summary || 'Aucun moyen de paiement enregistre');
                 setInvoices(invoicesRes.data || []);
+                setOwnedGames(ownedRes.data || []);
+                setOrders(ordersRes.data || []);
                 setLoading(false);
             } catch (err) {
                 console.error('Failed to load profile data', err);
@@ -126,21 +113,20 @@ export default function Profile() {
         return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
     };
 
-    const formatBillingDate = (dateString) => {
-        if (!dateString) return 'N/A';
-        return new Date(dateString).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-    };
-
     const refreshBillingData = async () => {
-        const [statusRes, paymentRes, invoicesRes, profileRes] = await Promise.all([
+        const [statusRes, paymentRes, invoicesRes, profileRes, ownedRes, ordersRes] = await Promise.all([
             api.get('/billing/status'),
             api.get('/billing/payment-method'),
             api.get('/billing/invoices'),
-            api.get('/profile/me')
+            api.get('/profile/me'),
+            api.get('/billing/owned-games'),
+            api.get('/billing/orders')
         ]);
         setBillingData(statusRes.data);
         setPaymentSummary(paymentRes.data.summary || 'Aucun moyen de paiement enregistre');
         setInvoices(invoicesRes.data || []);
+        setOwnedGames(ownedRes.data || []);
+        setOrders(ordersRes.data || []);
         setProfileData((prev) => ({ ...prev, ...profileRes.data }));
     };
 
@@ -194,47 +180,6 @@ export default function Profile() {
         } catch (err) {
             console.error(err);
             setMessage(err?.response?.data?.message || 'Failed to change password.');
-        }
-    };
-
-    const handleSubscribe = async () => {
-        try {
-            const sessionRes = await api.post('/billing/checkout-session');
-            const checkoutUrl = sessionRes?.data?.checkoutUrl;
-            if (!checkoutUrl) {
-                throw new Error('Checkout URL was not returned');
-            }
-            window.location.href = checkoutUrl;
-        } catch (err) {
-            console.error(err);
-            setMessage('Failed to subscribe.');
-        }
-    };
-
-    const handleCancelSubscription = async () => {
-        try {
-            await api.post('/billing/cancel');
-            await refreshBillingData();
-            setMessage('Subscription will remain active until the expiration date.');
-        } catch (err) {
-            console.error(err);
-            setMessage('Failed to cancel subscription.');
-        }
-    };
-
-    const handleResumeSubscription = async () => {
-        try {
-            await api.post('/billing/resume');
-            await refreshBillingData();
-            setMessage('Subscription renewed. Auto-renew has been re-enabled.');
-        } catch (err) {
-            console.error(err);
-            if (err?.response?.status === 403) {
-                setMessage('Renew blocked (403). Please re-login and retry. If it persists, ensure frontend is running on localhost and backend was restarted.');
-                return;
-            }
-            const backendMessage = err?.response?.data?.message || err?.response?.data;
-            setMessage(backendMessage || 'Failed to renew subscription.');
         }
     };
 
@@ -331,30 +276,55 @@ export default function Profile() {
 
                 {activeTab === 'billing' && (
                     <>
-                        <h2 style={styles.sectionTitle}>Facturation</h2>
+                        <h2 style={styles.sectionTitle}>Purchases</h2>
                         <div style={styles.summaryGrid}>
                             <div style={styles.statCard}>
-                                <div style={styles.statValue}>{billingData.subscriptionActive ? 'Active' : 'Inactive'}</div>
-                                <div style={styles.statLabel}>Subscription</div>
-                                <p style={styles.smallLine}>Plan: {billingData.subscriptionActive ? (billingData.planName || 'Gamer') : 'Free'}</p>
-                                <p style={styles.smallLine}>Expires: {billingData.subscriptionActive ? formatBillingDate(billingData.subscriptionEndsAt) : '—'}</p>
-                                {billingData.subscriptionActive && billingData.cancelAtPeriodEnd && (
-                                    <p style={styles.warningLine}>Cancellation scheduled. Access remains active until expiry.</p>
-                                )}
-                                {!billingData.subscriptionActive ? (
-                                    <button onClick={handleSubscribe} style={styles.actionButton}>Subscribe</button>
-                                ) : !billingData.cancelAtPeriodEnd ? (
-                                    <button onClick={handleCancelSubscription} style={styles.cancelActionButton}>Cancel Subscription</button>
-                                ) : (
-                                    <button onClick={handleResumeSubscription} style={styles.actionButton}>Renew Subscription</button>
-                                )}
+                                <div style={styles.statValue}>{billingData.ownedGamesCount || 0}</div>
+                                <div style={styles.statLabel}>Owned Games</div>
+                                <p style={styles.smallLine}>Current model: {billingData.planName || 'Game Ownership'}</p>
+                                <p style={styles.smallLine}>Cart items: {billingData.cartItemsCount || 0}</p>
+                                <button onClick={() => navigate('/games')} style={styles.actionButton}>Go to cart</button>
                             </div>
                             <div style={styles.statCard}>
                                 <div style={styles.statValueSmall}>Moyen de Paiement</div>
                                 <div style={styles.paymentSummary}>{paymentSummary}</div>
-                                <p style={styles.smallLine}>Stripe sandbox source</p>
+                                <p style={styles.smallLine}>Stripe checkout source</p>
                             </div>
                         </div>
+
+                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Owned Games</h2>
+                        {ownedGames.length === 0 ? (
+                            <p style={{ color: '#aaa' }}>No owned games yet.</p>
+                        ) : (
+                            <div style={styles.historyList}>
+                                {ownedGames.map((game) => (
+                                    <div key={game.gameId} style={styles.historyItem}>
+                                        <div style={styles.historyInfo}>
+                                            <h3 style={styles.historyTitle}>{game.title}</h3>
+                                            <p style={styles.historyDate}>Purchased: {formatDate(game.purchasedAt)}</p>
+                                        </div>
+                                        <div style={styles.invoiceAmount}>{game.price} USD</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+
+                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Orders</h2>
+                        {orders.length === 0 ? (
+                            <p style={{ color: '#aaa' }}>No orders yet.</p>
+                        ) : (
+                            <div style={styles.historyList}>
+                                {orders.map((order) => (
+                                    <div key={order.orderId} style={styles.historyItem}>
+                                        <div style={styles.historyInfo}>
+                                            <h3 style={styles.historyTitle}>Order #{order.orderId}</h3>
+                                            <p style={styles.historyDate}>{formatDate(order.createdAt)} • {order.items?.length || 0} item(s)</p>
+                                        </div>
+                                        <div style={styles.invoiceAmount}>{order.totalAmount} {order.currency}</div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
 
                         <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Invoice History</h2>
                         {invoices.length === 0 ? (

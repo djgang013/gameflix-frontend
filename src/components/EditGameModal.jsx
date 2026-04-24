@@ -8,6 +8,8 @@ export default function EditGameModal({ isOpen, onClose, onGameUpdated, game }) 
     const [gameType, setGameType] = useState('CODED');
     const [sourceUrl, setSourceUrl] = useState('');
     const [assetPath, setAssetPath] = useState('');
+    const [paid, setPaid] = useState(false);
+    const [price, setPrice] = useState('0.00');
 
     // NEW: File upload states for editing
     const [selectedFile, setSelectedFile] = useState(null);
@@ -17,12 +19,21 @@ export default function EditGameModal({ isOpen, onClose, onGameUpdated, game }) 
     // When the modal opens, pre-fill all the inputs with the game's existing data!
     useEffect(() => {
         if (game) {
+            const numericPrice = Number(game.price ?? 0);
+            const hasPositivePrice = Number.isFinite(numericPrice) && numericPrice > 0;
+            const paidFlag = typeof game.paid === 'boolean'
+                ? game.paid
+                : String(game.paid).toLowerCase() === 'true';
+            const inferredPaid = paidFlag || game.gameType === 'CODED' || hasPositivePrice;
+
             setTitle(game.title || '');
             setDescription(game.description || '');
             setThumbnailUrl(game.thumbnailUrl || '');
             setGameType(game.gameType || 'CODED');
             setSourceUrl(game.sourceUrl || '');
             setAssetPath(game.assetPath || '');
+            setPaid(inferredPaid);
+            setPrice(game.price ?? (game.gameType === 'CODED' ? '5.00' : '0.00'));
 
             // Reset upload states when opening a new game
             setSelectedFile(null);
@@ -78,6 +89,8 @@ export default function EditGameModal({ isOpen, onClose, onGameUpdated, game }) 
                 description,
                 thumbnailUrl: finalImageUrl,
                 gameType,
+                paid,
+                price: paid ? price : '0.00',
                 sourceUrl,
                 assetPath
             });
@@ -150,6 +163,34 @@ export default function EditGameModal({ isOpen, onClose, onGameUpdated, game }) 
                     ) : (
                         <input style={styles.input} type="text" placeholder="Source URL (e.g., https://...)" value={sourceUrl} onChange={(e) => setSourceUrl(e.target.value)} required />
                     )}
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.92rem', color: '#ddd' }}>
+                        <input
+                            type="checkbox"
+                            checked={paid}
+                            onChange={(e) => {
+                                const next = e.target.checked;
+                                setPaid(next);
+                                if (!next) {
+                                    setPrice('0.00');
+                                } else {
+                                    setPrice('5.00');
+                                }
+                            }}
+                        />
+                        Paid game
+                    </label>
+
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        disabled={!paid}
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="Price in USD"
+                        style={{ ...styles.input, opacity: paid ? 1 : 0.6 }}
+                    />
 
                     <div style={styles.buttonGroup}>
                         <button type="button" onClick={onClose} disabled={isUploading} style={styles.cancelButton}>Cancel</button>

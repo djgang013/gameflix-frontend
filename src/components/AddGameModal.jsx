@@ -7,6 +7,8 @@ export default function AddGameModal({ isOpen, onClose, onGameAdded }) {
     const [thumbnailUrl, setThumbnailUrl] = useState('');
     const [gameType, setGameType] = useState('EMBEDDED');
     const [gameLink, setGameLink] = useState('');
+    const [paid, setPaid] = useState(false);
+    const [price, setPrice] = useState('5.00');
     const [error, setError] = useState('');
 
     const [selectedFile, setSelectedFile] = useState(null);
@@ -55,7 +57,9 @@ export default function AddGameModal({ isOpen, onClose, onGameAdded }) {
             title,
             description,
             thumbnailUrl: finalImageUrl,
-            gameType
+            gameType,
+            paid,
+            price: paid ? price : '0.00'
         };
 
         if (gameType === 'EMBEDDED') {
@@ -72,6 +76,8 @@ export default function AddGameModal({ isOpen, onClose, onGameAdded }) {
             setDescription('');
             setThumbnailUrl('');
             setGameLink('');
+            setPaid(false);
+            setPrice('0.00');
             setSelectedFile(null);
             setIsUploading(false);
 
@@ -136,6 +142,34 @@ export default function AddGameModal({ isOpen, onClose, onGameAdded }) {
                     </select>
 
                     <input type="text" required placeholder={gameType === 'EMBEDDED' ? "https://example.com/game" : "/assets/games/mygame.js"} value={gameLink} onChange={(e) => setGameLink(e.target.value)} style={styles.input} />
+
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.92rem', color: '#ddd' }}>
+                        <input
+                            type="checkbox"
+                            checked={paid}
+                            onChange={(e) => {
+                                const next = e.target.checked;
+                                setPaid(next);
+                                if (!next) {
+                                    setPrice('0.00');
+                                } else {
+                                    setPrice('5.00');
+                                }
+                            }}
+                        />
+                        Paid game
+                    </label>
+
+                    <input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        disabled={!paid}
+                        value={price}
+                        onChange={(e) => setPrice(e.target.value)}
+                        placeholder="Price in USD"
+                        style={{ ...styles.input, opacity: paid ? 1 : 0.6 }}
+                    />
 
                     <div style={styles.buttonRow}>
                         <button type="button" onClick={onClose} disabled={isUploading} style={styles.cancelButton}>Cancel</button>
