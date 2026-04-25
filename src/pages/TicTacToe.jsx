@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import useGameTimer from '../hooks/useGameTimer';
 import useGamepadExit from '../hooks/useGamepadExit';
+import GameSocialSection from '../components/GameSocialSection';
 export default function TicTacToe() {
     useGameTimer("TicTacToe(Java Edition)");
     useGamepadExit();
@@ -168,6 +169,13 @@ export default function TicTacToe() {
                     </div>
                 </div>
             </div>
+
+            <div style={styles.bottomSocialSection}>
+                <GameSocialSection
+                    gameAssetPath="/play/tictactoe"
+                    gameTitleCandidates={["Tic Tac Toe", "TicTacToe(Java Edition)"]}
+                />
+            </div>
         </div>
     );
 }
@@ -219,6 +227,8 @@ const styles = {
     board: { display: 'grid', gridTemplateColumns: 'repeat(3, 100px)', gridTemplateRows: 'repeat(3, 100px)', gap: '10px', backgroundColor: 'rgba(0,0,0,0.5)', padding: '10px', borderRadius: '8px', border: '1px solid rgba(255,255,255,0.05)' },
     cell: { backgroundColor: 'rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', borderRadius: '4px', transition: 'background 0.2s', border: '1px solid rgba(255,255,255,0.1)' },
     resetButton: { marginTop: '30px', padding: '12px 24px', backgroundColor: '#e50914', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 10px rgba(229, 9, 20, 0.4)' },
+
+    bottomSocialSection: { position: 'relative', zIndex: 2, width: '100%', maxWidth: '1100px', margin: '0 auto 50px auto', padding: '0 50px', boxSizing: 'border-box' },
 
     // --- LEADERBOARD PANEL (FROSTED GLASS) ---
     leaderboardWrapper: {

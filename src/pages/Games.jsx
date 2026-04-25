@@ -24,6 +24,8 @@ export default function Games() {
     const [searchQuery, setSearchQuery] = useState('');
 
     const [ownedGameIds, setOwnedGameIds] = useState(new Set());
+    const [favoriteGameIds, setFavoriteGameIds] = useState(new Set());
+    const [gameRatings, setGameRatings] = useState({});
     const [cart, setCart] = useState({ items: [], itemCount: 0, total: '0.00', currency: 'USD' });
     const [isCartOpen, setIsCartOpen] = useState(false);
 
@@ -106,16 +108,32 @@ export default function Games() {
 
     const fetchGames = async () => {
         try {
-            const [gamesResponse, statsResponse, ownedIdsResponse, cartResponse] = await Promise.all([
+            const [gamesResponse, statsResponse, ownedIdsResponse, cartResponse, favoritesResponse] = await Promise.all([
                 api.get('/games'),
                 api.get('/stats/recent'),
                 api.get('/billing/owned-game-ids'),
-                api.get('/billing/cart')
+                api.get('/billing/cart'),
+                api.get('/social/favorites')
             ]);
-            setGames(gamesResponse.data);
+            const loadedGames = gamesResponse.data || [];
+
+            const ratingRequests = loadedGames.map((game) =>
+                api.get(`/social/games/${game.id}/summary`)
+                    .then((response) => [game.id, response.data])
+                    .catch(() => [game.id, { averageRating: 0, ratingCount: 0 }])
+            );
+            const ratingEntries = await Promise.all(ratingRequests);
+            const ratingMap = Object.fromEntries(ratingEntries.map(([gameId, summary]) => [gameId, {
+                averageRating: summary?.averageRating || 0,
+                ratingCount: summary?.ratingCount || 0
+            }]));
+
+            setGames(loadedGames);
             setRecentStats(statsResponse.data);
             setOwnedGameIds(new Set(ownedIdsResponse.data || []));
             setCart(cartResponse.data || { items: [], itemCount: 0, total: '0.00', currency: 'USD' });
+            setFavoriteGameIds(new Set((favoritesResponse.data || []).map((item) => item.gameId)));
+            setGameRatings(ratingMap);
             setLoading(false);
         } catch (err) {
             setError('Failed to load dashboard data.');
@@ -195,6 +213,23 @@ export default function Games() {
             return;
         }
         goToGame(game);
+    };
+
+    const toggleFavorite = async (game, e) => {
+        e.stopPropagation();
+
+        try {
+            if (favoriteGameIds.has(game.id)) {
+                await api.delete(`/social/games/${game.id}/favorite`);
+                setMessage(`${game.title} removed from favorites.`);
+            } else {
+                await api.post(`/social/games/${game.id}/favorite`);
+                setMessage(`${game.title} added to favorites.`);
+            }
+            await fetchGames();
+        } catch {
+            setError('Could not update favorites right now.');
+        }
     };
 
     const handlePlayActive = useCallback(() => {
@@ -281,6 +316,13 @@ export default function Games() {
     const featuredGames = games.slice(0, 5);
     const currentFeatured = featuredGames[featuredIndex];
     const filteredGames = games.filter((game) => game.title.toLowerCase().includes(searchQuery.toLowerCase()));
+
+    const ratingBadgeText = (gameId) => {
+        const rating = gameRatings[gameId];
+        if (!rating) return '0.0 (0)';
+        return `${(rating.averageRating || 0).toFixed(1)} (${rating.ratingCount || 0})`;
+    };
+
     const containerStyle = {
         ...styles.container,
         backgroundColor: isConsoleMode ? '#0a101e' : '#141414'
@@ -394,6 +436,7 @@ export default function Games() {
 
                                         <div style={styles.billboardRight}>
                                             <h2 style={styles.billboardTitle}>{currentFeatured.title}</h2>
+                                            <div style={styles.billboardMeta}>⭐ {ratingBadgeText(currentFeatured.id)}</div>
 
                                             <p style={{ ...styles.billboardDesc, marginTop: '20px' }}>
                                                 {currentFeatured.description || 'Jump into this incredible experience.'}
@@ -402,7 +445,6 @@ export default function Games() {
                                             <div style={styles.billboardTags}>
                                                 <span className="hover-badge">{currentFeatured.gameType}</span>
                                                 <span className="hover-badge">Featured</span>
-                                                {currentFeatured.gameType === 'CODED' && <span className="hover-badge">Owned Access</span>}
                                             </div>
 
                                             <div style={styles.billboardAction}>
@@ -462,6 +504,7 @@ export default function Games() {
 
                                     {filteredGames.map((game) => (
                                         <div key={game.id} className="game-card" onClick={() => handleGameStart(game)}>
+                                            <button className="edit-btn" style={{ ...styles.favoriteButton, right: userRole === 'ROLE_ADMIN' ? '90px' : '10px' }} onClick={(e) => toggleFavorite(game, e)} title={favoriteGameIds.has(game.id) ? 'Remove Favorite' : 'Add Favorite'}>{favoriteGameIds.has(game.id) ? '♥' : '♡'}</button>
                                             {userRole === 'ROLE_ADMIN' && (
                                                 <>
                                                     <button className="edit-btn" style={styles.editButton} onClick={(e) => { e.stopPropagation(); setEditingGame(game); }} title="Edit Game">✏️</button>
@@ -471,6 +514,7 @@ export default function Games() {
                                             <div className="game-poster-wrapper">
                                                 <img src={game.thumbnailUrl || 'https://placehold.co/400x600/222222/FFFFFF/png?text=No+Cover'} alt={game.title} className="game-poster" onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/400x600/141414/e50914/png?text=Image+Error'; }} />
                                                 <div className="game-hover-overlay">
+                                                    <div style={styles.hoverRatingBadge}>⭐ {ratingBadgeText(game.id)}</div>
                                                     <p className="hover-desc">{game.description ? game.description : 'No description available.'}</p>
                                                     <div className="hover-tags"><span className="hover-badge">{game.gameType}</span></div>
 
@@ -533,6 +577,7 @@ const styles = {
     navControls: { display: 'flex', gap: '15px', alignItems: 'center' },
     consoleToggleButton: { padding: '8px 20px', backgroundColor: '#3d4450', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', transition: 'transform 0.2s', boxShadow: '0 4px 6px rgba(0,0,0,0.3)', zIndex: 20 },
     cartToggleButton: { padding: '8px 16px', backgroundColor: '#2d7d45', color: 'white', border: 'none', borderRadius: '20px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.95rem' },
+    favoriteButton: { position: 'absolute', top: '10px', backgroundColor: 'rgba(20, 20, 20, 0.8)', color: '#ff8b8b', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 20, backdropFilter: 'blur(4px)', fontSize: '1rem', fontWeight: 'bold' },
     addButton: { padding: '8px 16px', backgroundColor: 'rgba(109, 109, 110, 0.7)', color: 'white', border: '1px solid rgba(255,255,255,0.4)', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem', backdropFilter: 'blur(4px)' },
     logoutButton: { padding: '8px 16px', backgroundColor: '#e50914', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold', fontSize: '1rem' },
 
@@ -552,6 +597,7 @@ const styles = {
     billboardImg: { width: '100%', height: '100%', objectFit: 'contain', position: 'relative', zIndex: 2, backgroundColor: 'rgba(0,0,0,0.4)' },
     billboardRight: { flex: 1, backgroundColor: '#0f1922', padding: '20px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', zIndex: 3, boxShadow: '-10px 0 20px rgba(0,0,0,0.5)' },
     billboardTitle: { margin: 0, fontSize: '1.8rem', color: '#fff', textShadow: '1px 1px 2px rgba(0,0,0,0.8)' },
+    billboardMeta: { marginTop: '8px', color: '#f6d768', fontSize: '0.92rem', fontWeight: 700 },
     billboardDesc: { color: '#acb2b8', fontSize: '0.9rem', lineHeight: '1.4', marginTop: '15px', display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' },
     billboardTags: { display: 'flex', gap: '8px', marginTop: '15px' },
     billboardAction: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: 'auto', paddingTop: '15px' },
@@ -565,6 +611,7 @@ const styles = {
     grid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' },
     deleteButton: { position: 'absolute', top: '10px', right: '10px', backgroundColor: 'rgba(20, 20, 20, 0.8)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 20, backdropFilter: 'blur(4px)' },
     editButton: { position: 'absolute', top: '10px', right: '50px', backgroundColor: 'rgba(20, 20, 20, 0.8)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '50%', width: '32px', height: '32px', display: 'flex', justifyContent: 'center', alignItems: 'center', cursor: 'pointer', zIndex: 20, backdropFilter: 'blur(4px)' },
+    hoverRatingBadge: { position: 'absolute', top: '10px', left: '10px', zIndex: 5, backgroundColor: 'rgba(0,0,0,0.72)', color: '#f6d768', border: '1px solid rgba(255,255,255,0.2)', borderRadius: '999px', padding: '4px 8px', fontSize: '0.74rem', fontWeight: 'bold' },
     cardTitle: { marginTop: '10px', color: '#e5e5e5', fontSize: '1rem', textAlign: 'center', fontWeight: '500', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
     recentCard: { minWidth: '280px', backgroundColor: '#1c1c1c', borderRadius: '8px', overflow: 'hidden', cursor: 'pointer', border: '1px solid #333' },
     recentImage: { width: '100%', height: '120px', objectFit: 'cover', borderBottom: '2px solid #e50914' },

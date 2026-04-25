@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import useGameTimer from '../hooks/useGameTimer';
 import useGamepadExit from '../hooks/useGamepadExit';
+import GameSocialSection from '../components/GameSocialSection';
 export default function Wordle() {
     useGameTimer("Tech Wordle");
     useGamepadExit();
@@ -204,6 +205,13 @@ export default function Wordle() {
                     </button>
                 )}
             </div>
+
+            <div style={styles.bottomSocialSection}>
+                <GameSocialSection
+                    gameAssetPath="/play/wordle"
+                    gameTitleCandidates={["Wordle", "Tech Wordle"]}
+                />
+            </div>
         </div>
     );
 }
@@ -224,5 +232,6 @@ const styles = {
     key: { height: '58px', border: 'none', borderRadius: '4px', color: 'white', fontWeight: 'bold', cursor: 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', transition: 'background-color 0.2s' },
 
     resetButton: { padding: '15px 30px', backgroundColor: '#e50914', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold', width: '100%' },
+    bottomSocialSection: { width: '100%', maxWidth: '900px', margin: '20px auto 0 auto' },
     loading: { color: 'white', textAlign: 'center', marginTop: '50px' }
 };

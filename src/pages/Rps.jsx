@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import useGameTimer from '../hooks/useGameTimer';
 import useGamepadExit from '../hooks/useGamepadExit';
+import GameSocialSection from '../components/GameSocialSection';
 
 export default function Rps() {
     useGameTimer("RPS: Extreme");
@@ -183,6 +184,13 @@ export default function Rps() {
                     </div>
                 </div>
             </div>
+
+            <div style={styles.bottomSocialSection}>
+                <GameSocialSection
+                    gameAssetPath="/play/rps"
+                    gameTitleCandidates={["Rock Paper Scissors", "RPS: Extreme"]}
+                />
+            </div>
         </div>
     );
 }
@@ -242,6 +250,8 @@ const styles = {
 
     matchWinnerBox: { textAlign: 'center', padding: '40px', backgroundColor: 'rgba(0,0,0,0.6)', borderRadius: '12px', width: '100%', border: '1px solid rgba(255,255,255,0.1)', boxSizing: 'border-box', backdropFilter: 'blur(8px)' },
     resetButton: { marginTop: '30px', padding: '15px 40px', backgroundColor: '#e50914', color: 'white', border: 'none', borderRadius: '6px', cursor: 'pointer', fontSize: '1.2rem', fontWeight: 'bold', boxShadow: '0 4px 15px rgba(229, 9, 20, 0.4)', transition: 'transform 0.2s' },
+
+    bottomSocialSection: { position: 'relative', zIndex: 2, width: '100%', maxWidth: '1100px', margin: '0 auto 50px auto', padding: '0 50px', boxSizing: 'border-box' },
 
     // --- LEADERBOARD PANEL (FROSTED GLASS) ---
     leaderboardWrapper: {

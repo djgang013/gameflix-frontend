@@ -25,6 +25,7 @@ export default function Profile() {
     const [invoices, setInvoices] = useState([]);
     const [ownedGames, setOwnedGames] = useState([]);
     const [orders, setOrders] = useState([]);
+    const [favorites, setFavorites] = useState([]);
 
     const [displayNameInput, setDisplayNameInput] = useState('');
     const [selectedFile, setSelectedFile] = useState(null);
@@ -68,9 +69,10 @@ export default function Profile() {
                     api.get('/billing/invoices')
                 ]);
 
-                const [ownedRes, ordersRes] = await Promise.all([
+                const [ownedRes, ordersRes, favoritesRes] = await Promise.all([
                     api.get('/billing/owned-games'),
-                    api.get('/billing/orders')
+                    api.get('/billing/orders'),
+                    api.get('/social/favorites')
                 ]);
 
                 const validStats = statsRes.data.filter((s) => s.gamName && s.gamName !== 'undefined');
@@ -83,6 +85,7 @@ export default function Profile() {
                 setInvoices(invoicesRes.data || []);
                 setOwnedGames(ownedRes.data || []);
                 setOrders(ordersRes.data || []);
+                setFavorites(favoritesRes.data || []);
                 setLoading(false);
             } catch (err) {
                 console.error('Failed to load profile data', err);
@@ -93,7 +96,7 @@ export default function Profile() {
         loadData();
     }, []);
 
-    if (loading) return <div style={styles.loadingScreen}><h2>Loading Profile...</h2></div>;
+    if (loading) return <div style={styles.loadingScreen}><h2>Chargement du profil...</h2></div>;
 
     const totalSecondsPlayed = stats.reduce((sum, stat) => sum + stat.totalPlayTimeSeconds, 0);
     const totalGamesPlayed = stats.length;
@@ -108,9 +111,9 @@ export default function Profile() {
     };
 
     const formatDate = (dateString) => {
-        if (!dateString) return 'Never';
+        if (!dateString) return 'Jamais';
         const date = new Date(dateString);
-        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+        return date.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
     };
 
     const refreshBillingData = async () => {
@@ -132,7 +135,7 @@ export default function Profile() {
 
     const handleUploadAvatar = async () => {
         if (!selectedFile) {
-            setMessage('Choose an image first.');
+            setMessage('Choisis d abord une image.');
             return;
         }
 
@@ -146,11 +149,11 @@ export default function Profile() {
                 avatarUrl: uploadRes.data
             });
             setProfileData((prev) => ({ ...prev, ...profileRes.data }));
-            setMessage('Avatar updated successfully.');
+            setMessage('Avatar mis a jour avec succes.');
             setSelectedFile(null);
         } catch (err) {
             console.error(err);
-            setMessage('Failed to upload avatar.');
+            setMessage('Echec de l envoi de l avatar.');
         }
     };
 
@@ -161,10 +164,10 @@ export default function Profile() {
                 avatarUrl: profileData.avatarUrl
             });
             setProfileData((prev) => ({ ...prev, ...profileRes.data }));
-            setMessage('Profile updated successfully.');
+            setMessage('Profil mis a jour avec succes.');
         } catch (err) {
             console.error(err);
-            setMessage('Failed to update profile information.');
+            setMessage('Echec de la mise a jour du profil.');
         }
     };
 
@@ -176,20 +179,24 @@ export default function Profile() {
             });
             setCurrentPassword('');
             setNewPassword('');
-            setMessage('Password updated successfully.');
+            setMessage('Mot de passe mis a jour avec succes.');
         } catch (err) {
             console.error(err);
-            setMessage(err?.response?.data?.message || 'Failed to change password.');
+            setMessage(err?.response?.data?.message || 'Echec du changement de mot de passe.');
         }
     };
 
     const avatarSrc = profileData.avatarUrl || `https://ui-avatars.com/api/?name=${profileData.displayName || profileData.username}&background=e50914&color=fff&size=150&bold=true`;
 
+    const openFavoriteGame = (game) => {
+        navigate(game.gameType === 'CODED' ? (game.assetPath || '/games') : `/play/${game.gameId}`);
+    };
+
     return (
         <div style={styles.container}>
             <nav style={styles.navbar}>
                 <h1 style={styles.logo} onClick={() => navigate('/games')}>GAMESFLIX</h1>
-                <button onClick={() => navigate('/games')} style={styles.backButton}>Back to Library</button>
+                <button onClick={() => navigate('/games')} style={styles.backButton}>Retour a la bibliotheque</button>
             </nav>
 
             <div style={styles.headerBanner}>
@@ -198,7 +205,7 @@ export default function Profile() {
                         <img src={avatarSrc} alt="Avatar" style={styles.avatar} />
                         <div>
                             <h1 style={styles.username}>{(profileData.displayName || profileData.username).toUpperCase()}</h1>
-                            <span style={styles.roleBadge}>{profileData.role?.replace('ROLE_', '') || 'USER'} Account</span>
+                            <span style={styles.roleBadge}>Compte {profileData.role?.replace('ROLE_', '') || 'USER'}</span>
                         </div>
                     </div>
                 </div>
@@ -206,32 +213,33 @@ export default function Profile() {
 
             <div style={styles.content}>
                 <div style={styles.tabRow}>
-                    <button style={{ ...styles.tabButton, ...(activeTab === 'profile' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('profile')}>Profile Settings</button>
-                    <button style={{ ...styles.tabButton, ...(activeTab === 'stats' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('stats')}>Stats</button>
+                    <button style={{ ...styles.tabButton, ...(activeTab === 'profile' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('profile')}>Parametres du profil</button>
+                    <button style={{ ...styles.tabButton, ...(activeTab === 'stats' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('stats')}>Statistiques</button>
                     <button style={{ ...styles.tabButton, ...(activeTab === 'billing' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('billing')}>Facturation</button>
+                    <button style={{ ...styles.tabButton, ...(activeTab === 'favorites' ? styles.tabButtonActive : {}) }} onClick={() => setActiveTab('favorites')}>Favoris</button>
                 </div>
 
                 {message && <p style={styles.message}>{message}</p>}
 
                 {activeTab === 'profile' && (
                     <>
-                        <h2 style={styles.sectionTitle}>Profile Settings</h2>
+                        <h2 style={styles.sectionTitle}>Parametres du profil</h2>
                         <div style={styles.summaryGrid}>
                             <div style={styles.statCard}>
-                                <label style={styles.inputLabel}>Display Name</label>
+                                <label style={styles.inputLabel}>Nom d affichage</label>
                                 <input value={displayNameInput} onChange={(e) => setDisplayNameInput(e.target.value)} style={styles.input} />
-                                <button onClick={handleUpdateProfile} style={styles.actionButton}>Save Profile</button>
+                                <button onClick={handleUpdateProfile} style={styles.actionButton}>Enregistrer le profil</button>
                             </div>
                             <div style={styles.statCard}>
-                                <label style={styles.inputLabel}>Upload Avatar</label>
+                                <label style={styles.inputLabel}>Televerser un avatar</label>
                                 <input type="file" accept="image/*" onChange={(e) => setSelectedFile(e.target.files?.[0] || null)} style={styles.fileInput} />
-                                <button onClick={handleUploadAvatar} style={styles.actionButton}>Upload Photo</button>
+                                <button onClick={handleUploadAvatar} style={styles.actionButton}>Televerser la photo</button>
                             </div>
                             <div style={styles.statCard}>
-                                <label style={styles.inputLabel}>Password</label>
-                                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={styles.input} placeholder="Current password" />
-                                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={styles.input} placeholder="New password" />
-                                <button onClick={handleChangePassword} style={styles.actionButton}>Change Password</button>
+                                <label style={styles.inputLabel}>Mot de passe</label>
+                                <input type="password" value={currentPassword} onChange={(e) => setCurrentPassword(e.target.value)} style={styles.input} placeholder="Mot de passe actuel" />
+                                <input type="password" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} style={styles.input} placeholder="Nouveau mot de passe" />
+                                <button onClick={handleChangePassword} style={styles.actionButton}>Changer le mot de passe</button>
                             </div>
                         </div>
                     </>
@@ -239,32 +247,32 @@ export default function Profile() {
 
                 {activeTab === 'stats' && (
                     <>
-                        <h2 style={styles.sectionTitle}>Lifetime Stats</h2>
+                        <h2 style={styles.sectionTitle}>Statistiques globales</h2>
                         <div style={styles.summaryGrid}>
                             <div style={styles.statCard}>
                                 <div style={styles.statValue}>{formatTime(totalSecondsPlayed)}</div>
-                                <div style={styles.statLabel}>Total Playtime</div>
+                                <div style={styles.statLabel}>Temps de jeu total</div>
                             </div>
                             <div style={styles.statCard}>
                                 <div style={styles.statValue}>{totalGamesPlayed}</div>
-                                <div style={styles.statLabel}>Games Played</div>
+                                <div style={styles.statLabel}>Jeux joues</div>
                             </div>
                             <div style={styles.statCard}>
                                 <div style={styles.statValue}>{stats.length > 0 ? stats[0].gamName : 'None'}</div>
-                                <div style={styles.statLabel}>Most Recent Game</div>
+                                <div style={styles.statLabel}>Jeu le plus recent</div>
                             </div>
                         </div>
 
-                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Play History</h2>
+                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Historique de jeu</h2>
                         {stats.length === 0 ? (
-                            <p style={{ color: '#aaa' }}>You have not played any games yet.</p>
+                            <p style={{ color: '#aaa' }}>Tu n as joue a aucun jeu pour le moment.</p>
                         ) : (
                             <div style={styles.historyList}>
                                 {stats.map((stat) => (
                                     <div key={stat.id} style={styles.historyItem}>
                                         <div style={styles.historyInfo}>
                                             <h3 style={styles.historyTitle}>{stat.gamName}</h3>
-                                            <p style={styles.historyDate}>Last played: {formatDate(stat.lastPlayed)}</p>
+                                            <p style={styles.historyDate}>Derniere partie: {formatDate(stat.lastPlayed)}</p>
                                         </div>
                                         <div style={styles.historyTime}>{formatTime(stat.totalPlayTimeSeconds)}</div>
                                     </div>
@@ -276,32 +284,31 @@ export default function Profile() {
 
                 {activeTab === 'billing' && (
                     <>
-                        <h2 style={styles.sectionTitle}>Purchases</h2>
+                        <h2 style={styles.sectionTitle}>Achats</h2>
                         <div style={styles.summaryGrid}>
                             <div style={styles.statCard}>
                                 <div style={styles.statValue}>{billingData.ownedGamesCount || 0}</div>
-                                <div style={styles.statLabel}>Owned Games</div>
-                                <p style={styles.smallLine}>Current model: {billingData.planName || 'Game Ownership'}</p>
-                                <p style={styles.smallLine}>Cart items: {billingData.cartItemsCount || 0}</p>
-                                <button onClick={() => navigate('/games')} style={styles.actionButton}>Go to cart</button>
+                                <div style={styles.statLabel}>Jeux possedes</div>
+                                <p style={styles.smallLine}>Articles du panier: {billingData.cartItemsCount || 0}</p>
+                                <button onClick={() => navigate('/games')} style={styles.actionButton}>Aller au panier</button>
                             </div>
                             <div style={styles.statCard}>
                                 <div style={styles.statValueSmall}>Moyen de Paiement</div>
                                 <div style={styles.paymentSummary}>{paymentSummary}</div>
-                                <p style={styles.smallLine}>Stripe checkout source</p>
+                                <p style={styles.smallLine}>Source de paiement Stripe</p>
                             </div>
                         </div>
 
-                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Owned Games</h2>
+                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Jeux possedes</h2>
                         {ownedGames.length === 0 ? (
-                            <p style={{ color: '#aaa' }}>No owned games yet.</p>
+                            <p style={{ color: '#aaa' }}>Aucun jeu possede pour le moment.</p>
                         ) : (
                             <div style={styles.historyList}>
                                 {ownedGames.map((game) => (
                                     <div key={game.gameId} style={styles.historyItem}>
                                         <div style={styles.historyInfo}>
                                             <h3 style={styles.historyTitle}>{game.title}</h3>
-                                            <p style={styles.historyDate}>Purchased: {formatDate(game.purchasedAt)}</p>
+                                            <p style={styles.historyDate}>Achete le: {formatDate(game.purchasedAt)}</p>
                                         </div>
                                         <div style={styles.invoiceAmount}>{game.price} USD</div>
                                     </div>
@@ -309,16 +316,16 @@ export default function Profile() {
                             </div>
                         )}
 
-                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Orders</h2>
+                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Commandes</h2>
                         {orders.length === 0 ? (
-                            <p style={{ color: '#aaa' }}>No orders yet.</p>
+                            <p style={{ color: '#aaa' }}>Aucune commande pour le moment.</p>
                         ) : (
                             <div style={styles.historyList}>
                                 {orders.map((order) => (
                                     <div key={order.orderId} style={styles.historyItem}>
                                         <div style={styles.historyInfo}>
-                                            <h3 style={styles.historyTitle}>Order #{order.orderId}</h3>
-                                            <p style={styles.historyDate}>{formatDate(order.createdAt)} • {order.items?.length || 0} item(s)</p>
+                                            <h3 style={styles.historyTitle}>Commande #{order.orderId}</h3>
+                                            <p style={styles.historyDate}>{formatDate(order.createdAt)} • {order.items?.length || 0} article(s)</p>
                                         </div>
                                         <div style={styles.invoiceAmount}>{order.totalAmount} {order.currency}</div>
                                     </div>
@@ -326,9 +333,9 @@ export default function Profile() {
                             </div>
                         )}
 
-                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Invoice History</h2>
+                        <h2 style={{ ...styles.sectionTitle, marginTop: '50px' }}>Historique des factures</h2>
                         {invoices.length === 0 ? (
-                            <p style={{ color: '#aaa' }}>No invoices yet.</p>
+                            <p style={{ color: '#aaa' }}>Aucune facture pour le moment.</p>
                         ) : (
                             <div style={styles.historyList}>
                                 {invoices.map((invoice) => (
@@ -339,6 +346,33 @@ export default function Profile() {
                                         </div>
                                         <div style={styles.invoiceAmount}>{invoice.amount} {invoice.currency}</div>
                                     </div>
+                                ))}
+                            </div>
+                        )}
+                    </>
+                )}
+
+                {activeTab === 'favorites' && (
+                    <>
+                        <h2 style={styles.sectionTitle}>Jeux favoris</h2>
+                        {favorites.length === 0 ? (
+                            <p style={{ color: '#aaa' }}>Aucun favori pour le moment.</p>
+                        ) : (
+                            <div style={styles.favoritesGrid}>
+                                {favorites.map((game) => (
+                                    <article key={game.gameId} style={styles.favoriteCard} onClick={() => openFavoriteGame(game)}>
+                                        <div style={styles.favoritePosterWrap}>
+                                            <img
+                                                src={game.thumbnailUrl || 'https://placehold.co/400x600/222/fff?text=No+Cover'}
+                                                alt={game.title}
+                                                style={styles.favoritePoster}
+                                            />
+                                        </div>
+                                        <div style={styles.favoriteBody}>
+                                            <h3 style={styles.favoriteTitle}>{game.title}</h3>
+                                            <p style={styles.favoriteMeta}>{game.gameType} • Note {(game.averageRating || 0).toFixed(1)} ({game.ratingCount || 0})</p>
+                                        </div>
+                                    </article>
                                 ))}
                             </div>
                         )}
@@ -393,6 +427,14 @@ const styles = {
     historyDate: { margin: 0, color: '#aaa', fontSize: '0.9rem' },
     historyTime: { fontSize: '1.3rem', fontWeight: 'bold', color: '#4caf50' },
     invoiceAmount: { fontSize: '1.1rem', fontWeight: 'bold', color: '#e5e5e5' },
+
+    favoritesGrid: { display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: '15px' },
+    favoriteCard: { width: '160px', justifySelf: 'center', cursor: 'pointer', borderRadius: '12px', overflow: 'hidden', backgroundColor: '#1c1c1c', border: '1px solid #333', boxShadow: '0 10px 20px rgba(0,0,0,0.35)', transition: 'transform 0.2s ease' },
+    favoritePosterWrap: { width: '100%', aspectRatio: '2 / 3', backgroundColor: '#222' },
+    favoritePoster: { width: '100%', height: '100%', objectFit: 'cover', display: 'block' },
+    favoriteBody: { padding: '10px' },
+    favoriteTitle: { margin: 0, fontSize: '0.95rem', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' },
+    favoriteMeta: { margin: '6px 0 0 0', color: '#aaa', fontSize: '0.75rem', lineHeight: 1.3 },
 
     loadingScreen: { height: '100vh', display: 'flex', justifyContent: 'center', alignItems: 'center', backgroundColor: '#141414', color: '#e50914' }
 };
